@@ -485,3 +485,45 @@
     max-height: calc(100vh - 280px);
   }
 }
+
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.brand-logo {
+  display: block;
+  width: min(360px, 70vw);
+  height: auto;
+}
+
+.auth-logo {
+  display: block;
+  width: 82px;
+  height: auto;
+  margin: 0 auto 2px;
+}
+
+.login-card,
+.setup-card {
+  text-align: center;
+}
+
+.login-card p,
+.setup-card p {
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .brand-logo {
+    width: min(290px, 76vw);
+  }
+}

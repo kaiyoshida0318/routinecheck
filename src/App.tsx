@@ -62,7 +62,7 @@ function LoginGate({ onUnlock }: { onUnlock: () => void }) {
   return (
     <main className="login-page">
       <form className="login-card" onSubmit={handleSubmit}>
-        <div className="brand-mark">✓</div>
+        <img className="auth-logo" src="/routinecheck-symbol.png" alt="RoutineCheck" />
         <h1>RoutineCheck</h1>
         <p>{question || '秘密の質問'}</p>
         <input
@@ -276,7 +276,7 @@ export default function App() {
     return (
       <main className="setup-page">
         <div className="setup-card">
-          <div className="brand-mark">✓</div>
+          <img className="auth-logo" src="/routinecheck-symbol.png" alt="RoutineCheck" />
           <h1>RoutineCheck</h1>
           <p>Supabaseの環境変数が未設定です。</p>
           <pre>{`VITE_SUPABASE_URL=...
@@ -290,9 +290,9 @@ VITE_SUPABASE_ANON_KEY=...`}</pre>
     <main className="app-shell">
       <header className="app-header">
         <div className="brand">
-          <div className="brand-mark">✓</div>
           <div>
-            <h1>RoutineCheck</h1>
+            <img className="brand-logo" src="/routinecheck-full.png" alt="RoutineCheck" />
+            <h1 className="sr-only">RoutineCheck</h1>
             <p>日々の実施項目を、クリックだけで記録します。</p>
           </div>
         </div>
