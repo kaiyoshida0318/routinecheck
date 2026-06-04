@@ -527,3 +527,26 @@
     width: min(290px, 76vw);
   }
 }
+
+.login-display-name {
+  font-weight: 800;
+  color: #1f6fe5 !important;
+}
+
+.login-card button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+  box-shadow: none;
+}
+
+.auth-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: #eef7f4;
+  color: #147a51;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}

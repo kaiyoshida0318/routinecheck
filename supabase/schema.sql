@@ -1,4 +1,4 @@
--- RoutineCheck 初期スキーマ
+-- RoutineCheck 初期スキーマ / 秘密の質問ログイン版
 -- Supabase SQL Editorでこのファイル全体を実行してください。
 
 create extension if not exists pgcrypto;
@@ -52,47 +52,54 @@ create trigger set_routine_checks_updated_at
 before update on public.routine_checks
 for each row execute function public.set_updated_at();
 
--- MVP用の簡易ポリシーです。
--- ViteのブラウザアプリからSupabaseへ直接保存するため、anonロールに読み書きを許可しています。
--- 厳密な社内限定にしたい場合は、後でCloudflare Worker経由保存 + service roleに変更してください。
+-- shohin-api-worker の秘密の質問ログイン後に発行される Supabase Auth セッションだけを許可します。
 alter table public.routine_items enable row level security;
 alter table public.routine_checks enable row level security;
 
+-- 旧MVP版のanon許可ポリシーを削除します。
 drop policy if exists "routine_items_select_anon" on public.routine_items;
-create policy "routine_items_select_anon"
+drop policy if exists "routine_items_insert_anon" on public.routine_items;
+drop policy if exists "routine_items_update_anon" on public.routine_items;
+drop policy if exists "routine_checks_select_anon" on public.routine_checks;
+drop policy if exists "routine_checks_insert_anon" on public.routine_checks;
+drop policy if exists "routine_checks_update_anon" on public.routine_checks;
+
+-- ログイン済みユーザーのみ許可します。
+drop policy if exists "routine_items_select_authenticated" on public.routine_items;
+create policy "routine_items_select_authenticated"
   on public.routine_items for select
-  to anon
+  to authenticated
   using (true);
 
-drop policy if exists "routine_items_insert_anon" on public.routine_items;
-create policy "routine_items_insert_anon"
+drop policy if exists "routine_items_insert_authenticated" on public.routine_items;
+create policy "routine_items_insert_authenticated"
   on public.routine_items for insert
-  to anon
+  to authenticated
   with check (true);
 
-drop policy if exists "routine_items_update_anon" on public.routine_items;
-create policy "routine_items_update_anon"
+drop policy if exists "routine_items_update_authenticated" on public.routine_items;
+create policy "routine_items_update_authenticated"
   on public.routine_items for update
-  to anon
+  to authenticated
   using (true)
   with check (true);
 
-drop policy if exists "routine_checks_select_anon" on public.routine_checks;
-create policy "routine_checks_select_anon"
+drop policy if exists "routine_checks_select_authenticated" on public.routine_checks;
+create policy "routine_checks_select_authenticated"
   on public.routine_checks for select
-  to anon
+  to authenticated
   using (true);
 
-drop policy if exists "routine_checks_insert_anon" on public.routine_checks;
-create policy "routine_checks_insert_anon"
+drop policy if exists "routine_checks_insert_authenticated" on public.routine_checks;
+create policy "routine_checks_insert_authenticated"
   on public.routine_checks for insert
-  to anon
+  to authenticated
   with check (true);
 
-drop policy if exists "routine_checks_update_anon" on public.routine_checks;
-create policy "routine_checks_update_anon"
+drop policy if exists "routine_checks_update_authenticated" on public.routine_checks;
+create policy "routine_checks_update_authenticated"
   on public.routine_checks for update
-  to anon
+  to authenticated
   using (true)
   with check (true);
 

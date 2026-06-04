@@ -10,8 +10,34 @@ type Notice = {
   message: string;
 };
 
+type AuthQuestionResponse = {
+  ok?: boolean;
+  question?: string;
+  displayName?: string;
+  error?: string;
+};
+
+type AuthLoginResponse = {
+  ok?: boolean;
+  error?: string;
+  session?: {
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+    expires_at?: number;
+    token_type?: string;
+  };
+  user?: {
+    id?: string;
+    email?: string;
+  };
+  displayName?: string;
+};
+
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
-const STORAGE_LOGIN_KEY = 'routinecheck_unlocked';
+const AUTH_API_BASE_URL = (import.meta.env.VITE_AUTH_API_BASE_URL as string | undefined)?.replace(/\/+$/, '') || '';
+const AUTH_APP_ID = (import.meta.env.VITE_AUTH_APP_ID as string | undefined)?.trim() || 'routinecheck';
+const isAuthConfigured = Boolean(AUTH_API_BASE_URL);
 
 function pad(value: number) {
   return String(value).padStart(2, '0');
@@ -43,20 +69,96 @@ function getDayClassName(date: Date) {
   return '';
 }
 
+function makeAuthUrl(path: string) {
+  const url = new URL(path, `${AUTH_API_BASE_URL}/`);
+  url.searchParams.set('app', AUTH_APP_ID);
+  return url.toString();
+}
+
+async function readJson<T>(response: Response): Promise<T> {
+  return (await response.json().catch(() => ({}))) as T;
+}
+
 function LoginGate({ onUnlock }: { onUnlock: () => void }) {
-  const question = import.meta.env.VITE_LOGIN_QUESTION as string | undefined;
-  const answer = import.meta.env.VITE_LOGIN_ANSWER as string | undefined;
+  const [question, setQuestion] = useState('秘密の質問');
+  const [displayName, setDisplayName] = useState('秘密の質問ログイン');
   const [input, setInput] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadQuestion() {
+      try {
+        const response = await fetch(makeAuthUrl('/api/auth/question'), {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+        });
+        const payload = await readJson<AuthQuestionResponse>(response);
+        if (cancelled) return;
+        if (response.ok && payload.ok) {
+          if (payload.question) setQuestion(payload.question);
+          if (payload.displayName) setDisplayName(payload.displayName);
+        }
+      } catch {
+        if (!cancelled) {
+          setError('ログインAPIに接続できません。');
+        }
+      }
+    }
+
+    void loadQuestion();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!answer || input.trim() === answer.trim()) {
-      localStorage.setItem(STORAGE_LOGIN_KEY, '1');
-      onUnlock();
+    if (!supabase) return;
+
+    const answer = input.trim();
+    if (!answer) {
+      setError('回答を入力してください。');
       return;
     }
-    setError('答えが違います。');
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(makeAuthUrl('/api/auth/login'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ answer, app: AUTH_APP_ID }),
+      });
+      const payload = await readJson<AuthLoginResponse>(response);
+
+      if (!response.ok || !payload.ok || !payload.session?.access_token || !payload.session.refresh_token) {
+        setError(payload.error || 'ログインに失敗しました。');
+        return;
+      }
+
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: payload.session.access_token,
+        refresh_token: payload.session.refresh_token,
+      });
+
+      if (sessionError) {
+        setError(`ログインセッションの保存に失敗しました: ${sessionError.message}`);
+        return;
+      }
+
+      onUnlock();
+    } catch {
+      setError('ログインAPIに接続できません。');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -64,7 +166,8 @@ function LoginGate({ onUnlock }: { onUnlock: () => void }) {
       <form className="login-card" onSubmit={handleSubmit}>
         <img className="auth-logo" src="/routinecheck-symbol.png" alt="RoutineCheck" />
         <h1>RoutineCheck</h1>
-        <p>{question || '秘密の質問'}</p>
+        <p className="login-display-name">{displayName}</p>
+        <p>{question}</p>
         <input
           value={input}
           onChange={(event) => setInput(event.target.value)}
@@ -72,19 +175,17 @@ function LoginGate({ onUnlock }: { onUnlock: () => void }) {
           autoFocus
         />
         {error && <div className="login-error">{error}</div>}
-        <button type="submit">ログイン</button>
+        <button type="submit" disabled={loading}>
+          {loading ? '確認中...' : 'ログイン'}
+        </button>
       </form>
     </main>
   );
 }
 
 export default function App() {
-  const loginQuestion = import.meta.env.VITE_LOGIN_QUESTION as string | undefined;
-  const loginAnswer = import.meta.env.VITE_LOGIN_ANSWER as string | undefined;
-  const loginRequired = Boolean(loginQuestion && loginAnswer);
-  const [unlocked, setUnlocked] = useState(
-    !loginRequired || localStorage.getItem(STORAGE_LOGIN_KEY) === '1',
-  );
+  const [authChecking, setAuthChecking] = useState(true);
+  const [unlocked, setUnlocked] = useState(false);
 
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
@@ -108,6 +209,62 @@ export default function App() {
   const totalCells = items.length * days.length;
   const checkedCells = useMemo(() => Object.values(checkMap).filter(Boolean).length, [checkMap]);
   const monthRate = totalCells > 0 ? Math.round((checkedCells / totalCells) * 100) : 0;
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !isAuthConfigured || !supabase) {
+      setAuthChecking(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function verifySession() {
+      setAuthChecking(true);
+      const { data } = await supabase!.auth.getSession();
+      const token = data.session?.access_token;
+
+      if (!token) {
+        if (!cancelled) {
+          setUnlocked(false);
+          setAuthChecking(false);
+        }
+        return;
+      }
+
+      try {
+        const response = await fetch(makeAuthUrl('/api/auth/verify'), {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const payload = await readJson<{ ok?: boolean }>(response);
+
+        if (cancelled) return;
+
+        if (response.ok && payload.ok) {
+          setUnlocked(true);
+        } else {
+          await supabase!.auth.signOut();
+          setUnlocked(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setUnlocked(false);
+        }
+      } finally {
+        if (!cancelled) {
+          setAuthChecking(false);
+        }
+      }
+    }
+
+    void verifySession();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const loadData = useCallback(async () => {
     if (!supabase) return;
@@ -159,7 +316,7 @@ export default function App() {
   }, [firstDayKey, lastDayKey]);
 
   useEffect(() => {
-    if (unlocked && isSupabaseConfigured) {
+    if (unlocked && isSupabaseConfigured && isAuthConfigured) {
       void loadData();
     }
   }, [loadData, unlocked]);
@@ -263,27 +420,45 @@ export default function App() {
     setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1));
   }
 
-  function logout() {
-    localStorage.removeItem(STORAGE_LOGIN_KEY);
+  async function logout() {
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     setUnlocked(false);
+    setItems([]);
+    setCheckMap({});
   }
 
-  if (loginRequired && !unlocked) {
-    return <LoginGate onUnlock={() => setUnlocked(true)} />;
-  }
-
-  if (!isSupabaseConfigured) {
+  if (!isSupabaseConfigured || !isAuthConfigured) {
     return (
       <main className="setup-page">
         <div className="setup-card">
           <img className="auth-logo" src="/routinecheck-symbol.png" alt="RoutineCheck" />
           <h1>RoutineCheck</h1>
-          <p>Supabaseの環境変数が未設定です。</p>
+          <p>環境変数が未設定です。</p>
           <pre>{`VITE_SUPABASE_URL=...
-VITE_SUPABASE_ANON_KEY=...`}</pre>
+VITE_SUPABASE_ANON_KEY=...
+VITE_AUTH_API_BASE_URL=https://shohin-api-worker.example.workers.dev
+VITE_AUTH_APP_ID=routinecheck`}</pre>
         </div>
       </main>
     );
+  }
+
+  if (authChecking) {
+    return (
+      <main className="setup-page">
+        <div className="setup-card">
+          <img className="auth-logo" src="/routinecheck-symbol.png" alt="RoutineCheck" />
+          <h1>RoutineCheck</h1>
+          <p>ログイン状態を確認しています...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!unlocked) {
+    return <LoginGate onUnlock={() => setUnlocked(true)} />;
   }
 
   return (
@@ -300,11 +475,9 @@ VITE_SUPABASE_ANON_KEY=...`}</pre>
           <button className="ghost-button" onClick={() => setPanelOpen((value) => !value)}>
             項目管理
           </button>
-          {loginRequired && (
-            <button className="ghost-button" onClick={logout}>
-              ログアウト
-            </button>
-          )}
+          <button className="ghost-button" onClick={logout}>
+            ログアウト
+          </button>
         </div>
       </header>
 
