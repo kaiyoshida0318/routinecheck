@@ -414,6 +414,7 @@ export default function App() {
 
   async function moveItem(itemId: string, direction: -1 | 1) {
     if (!supabase) return;
+    const client = supabase;
 
     const currentIndex = items.findIndex((item) => item.id === itemId);
     const targetIndex = currentIndex + direction;
@@ -432,7 +433,7 @@ export default function App() {
 
     const results = await Promise.all(
       normalizedItems.map((item) =>
-        supabase.from('routine_items').update({ sort_order: item.sort_order }).eq('id', item.id),
+        client.from('routine_items').update({ sort_order: item.sort_order }).eq('id', item.id),
       ),
     );
 
