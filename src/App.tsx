@@ -201,9 +201,15 @@ export default function App() {
   const [editingValues, setEditingValues] = useState<Record<string, string>>({});
   const [editingCategories, setEditingCategories] = useState<Record<string, string>>({});
 
-  const totalCells = items.length * days.length;
-  const checkedCells = useMemo(() => Object.values(checkMap).filter(Boolean).length, [checkMap]);
-  const monthRate = totalCells > 0 ? Math.round((checkedCells / totalCells) * 100) : 0;
+
+  useEffect(() => {
+    if (!notice) return;
+    const timeoutMs = notice.type === 'error' ? 5200 : 2600;
+    const timerId = window.setTimeout(() => {
+      setNotice(null);
+    }, timeoutMs);
+    return () => window.clearTimeout(timerId);
+  }, [notice]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !isAuthConfigured || !supabase) {
@@ -557,23 +563,9 @@ VITE_AUTH_APP_ID=routinecheck`}</pre>
           <button onClick={() => moveMonth(1)}>翌月 →</button>
           <button className="today-button" onClick={goToday}>今日</button>
         </div>
-        <div className="summary-cards">
-          <div className="summary-card">
-            <span>項目数</span>
-            <strong>{items.length}</strong>
-          </div>
-          <div className="summary-card">
-            <span>チェック数</span>
-            <strong>{checkedCells}</strong>
-          </div>
-          <div className="summary-card">
-            <span>達成率</span>
-            <strong>{monthRate}%</strong>
-          </div>
-        </div>
       </section>
 
-      {notice && <div className={`notice ${notice.type}`}>{notice.message}</div>}
+      {notice && <div className={`toast ${notice.type}`}>{notice.message}</div>}
 
       {panelOpen && (
         <section className="manage-panel">
