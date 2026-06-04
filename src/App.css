@@ -512,6 +512,13 @@
   margin: 0 auto 2px;
 }
 
+.auth-full-logo {
+  display: block;
+  width: min(320px, 82vw);
+  height: auto;
+  margin: 0 auto 4px;
+}
+
 .login-card,
 .setup-card {
   text-align: center;
@@ -528,10 +535,6 @@
   }
 }
 
-.login-display-name {
-  font-weight: 800;
-  color: #1f6fe5 !important;
-}
 
 .login-card button:disabled {
   opacity: 0.65;

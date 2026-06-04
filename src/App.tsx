@@ -13,7 +13,6 @@ type Notice = {
 type AuthQuestionResponse = {
   ok?: boolean;
   question?: string;
-  displayName?: string;
   error?: string;
 };
 
@@ -31,7 +30,6 @@ type AuthLoginResponse = {
     id?: string;
     email?: string;
   };
-  displayName?: string;
 };
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
@@ -81,7 +79,6 @@ async function readJson<T>(response: Response): Promise<T> {
 
 function LoginGate({ onUnlock }: { onUnlock: () => void }) {
   const [question, setQuestion] = useState('秘密の質問');
-  const [displayName, setDisplayName] = useState('秘密の質問ログイン');
   const [input, setInput] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -99,7 +96,6 @@ function LoginGate({ onUnlock }: { onUnlock: () => void }) {
         if (cancelled) return;
         if (response.ok && payload.ok) {
           if (payload.question) setQuestion(payload.question);
-          if (payload.displayName) setDisplayName(payload.displayName);
         }
       } catch {
         if (!cancelled) {
@@ -164,9 +160,7 @@ function LoginGate({ onUnlock }: { onUnlock: () => void }) {
   return (
     <main className="login-page">
       <form className="login-card" onSubmit={handleSubmit}>
-        <img className="auth-logo" src="/routinecheck-symbol.png" alt="RoutineCheck" />
-        <h1>RoutineCheck</h1>
-        <p className="login-display-name">{displayName}</p>
+        <img className="auth-full-logo" src="/routinecheck-full.png" alt="RoutineCheck" />
         <p>{question}</p>
         <input
           value={input}
@@ -433,8 +427,7 @@ export default function App() {
     return (
       <main className="setup-page">
         <div className="setup-card">
-          <img className="auth-logo" src="/routinecheck-symbol.png" alt="RoutineCheck" />
-          <h1>RoutineCheck</h1>
+          <img className="auth-full-logo" src="/routinecheck-full.png" alt="RoutineCheck" />
           <p>環境変数が未設定です。</p>
           <pre>{`VITE_SUPABASE_URL=...
 VITE_SUPABASE_ANON_KEY=...
@@ -449,8 +442,7 @@ VITE_AUTH_APP_ID=routinecheck`}</pre>
     return (
       <main className="setup-page">
         <div className="setup-card">
-          <img className="auth-logo" src="/routinecheck-symbol.png" alt="RoutineCheck" />
-          <h1>RoutineCheck</h1>
+          <img className="auth-full-logo" src="/routinecheck-full.png" alt="RoutineCheck" />
           <p>ログイン状態を確認しています...</p>
         </div>
       </main>
