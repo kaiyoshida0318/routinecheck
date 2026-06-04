@@ -1,6 +1,6 @@
 .app-shell {
   min-height: 100vh;
-  padding: 24px;
+  padding: 0 24px 24px;
 }
 
 .app-header {
@@ -8,13 +8,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  max-width: 1760px;
-  margin: 0 auto 18px;
-  padding: 18px 20px;
-  border: 1px solid #e5eaf3;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 16px 40px rgba(26, 38, 64, 0.07);
+  width: calc(100% + 48px);
+  max-width: none;
+  margin: 0 -24px 18px;
+  padding: 16px 24px;
+  border: 0;
+  border-bottom: 1px solid #e5eaf3;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 34px rgba(26, 38, 64, 0.06);
 }
 
 .brand {
@@ -114,6 +116,16 @@
   transform: translateY(-1px);
 }
 
+.month-nav button:disabled,
+.ghost-button:disabled,
+.add-form button:disabled,
+.item-editor-row button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
 .today-button {
   background: #eef5ff !important;
   color: #1856a8 !important;
@@ -211,8 +223,19 @@
 
 .item-editor-row {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto auto;
+  grid-template-columns: 92px minmax(220px, 1fr) minmax(150px, 240px) auto auto;
   gap: 8px;
+  align-items: center;
+}
+
+.sort-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.sort-buttons button {
+  padding-inline: 8px;
 }
 
 .danger-button {
@@ -462,7 +485,13 @@
 
 @media (max-width: 920px) {
   .app-shell {
-    padding: 12px;
+    padding: 0 12px 12px;
+  }
+
+  .app-header {
+    width: calc(100% + 24px);
+    margin: 0 -12px 14px;
+    padding: 14px 12px;
   }
 
   .app-header,

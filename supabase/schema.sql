@@ -60,9 +60,11 @@ alter table public.routine_checks enable row level security;
 drop policy if exists "routine_items_select_anon" on public.routine_items;
 drop policy if exists "routine_items_insert_anon" on public.routine_items;
 drop policy if exists "routine_items_update_anon" on public.routine_items;
+drop policy if exists "routine_items_delete_anon" on public.routine_items;
 drop policy if exists "routine_checks_select_anon" on public.routine_checks;
 drop policy if exists "routine_checks_insert_anon" on public.routine_checks;
 drop policy if exists "routine_checks_update_anon" on public.routine_checks;
+drop policy if exists "routine_checks_delete_anon" on public.routine_checks;
 
 -- ログイン済みユーザーのみ許可します。
 drop policy if exists "routine_items_select_authenticated" on public.routine_items;
@@ -84,6 +86,12 @@ create policy "routine_items_update_authenticated"
   using (true)
   with check (true);
 
+drop policy if exists "routine_items_delete_authenticated" on public.routine_items;
+create policy "routine_items_delete_authenticated"
+  on public.routine_items for delete
+  to authenticated
+  using (true);
+
 drop policy if exists "routine_checks_select_authenticated" on public.routine_checks;
 create policy "routine_checks_select_authenticated"
   on public.routine_checks for select
@@ -102,6 +110,12 @@ create policy "routine_checks_update_authenticated"
   to authenticated
   using (true)
   with check (true);
+
+drop policy if exists "routine_checks_delete_authenticated" on public.routine_checks;
+create policy "routine_checks_delete_authenticated"
+  on public.routine_checks for delete
+  to authenticated
+  using (true);
 
 -- サンプル項目。不要なら実行後に画面から非表示にできます。
 insert into public.routine_items (name, category, sort_order)

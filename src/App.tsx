@@ -199,6 +199,7 @@ export default function App() {
   const [newItemCategory, setNewItemCategory] = useState('');
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingValues, setEditingValues] = useState<Record<string, string>>({});
+  const [editingCategories, setEditingCategories] = useState<Record<string, string>>({});
 
   const totalCells = items.length * days.length;
   const checkedCells = useMemo(() => Object.values(checkMap).filter(Boolean).length, [checkMap]);
@@ -306,6 +307,12 @@ export default function App() {
         return acc;
       }, {}),
     );
+    setEditingCategories(
+      nextItems.reduce<Record<string, string>>((acc, item) => {
+        acc[item.id] = item.category || '';
+        return acc;
+      }, {}),
+    );
     setLoading(false);
   }, [firstDayKey, lastDayKey]);
 
@@ -367,42 +374,110 @@ export default function App() {
     const addedItem = data as RoutineItem;
     setItems((current) => [...current, addedItem]);
     setEditingValues((current) => ({ ...current, [addedItem.id]: addedItem.name }));
+    setEditingCategories((current) => ({ ...current, [addedItem.id]: addedItem.category || '' }));
     setNewItemName('');
     setNewItemCategory('');
     setNotice({ type: 'success', message: '項目を追加しました。' });
   }
 
-  async function updateItemName(item: RoutineItem) {
+  async function updateItem(item: RoutineItem) {
     if (!supabase) return;
+
     const nextName = (editingValues[item.id] || '').trim();
-    if (!nextName || nextName === item.name) return;
+    const nextCategoryInput = (editingCategories[item.id] ?? '').trim();
+    const nextCategory = nextCategoryInput || null;
+
+    if (!nextName) {
+      setNotice({ type: 'error', message: '項目名を入力してください。' });
+      return;
+    }
+
+    const categoryChanged = (item.category || '') !== (nextCategory || '');
+    const nameChanged = nextName !== item.name;
+    if (!nameChanged && !categoryChanged) return;
 
     const { error } = await supabase
       .from('routine_items')
-      .update({ name: nextName })
+      .update({ name: nextName, category: nextCategory })
       .eq('id', item.id);
 
     if (error) {
-      setNotice({ type: 'error', message: `項目名の更新に失敗しました: ${error.message}` });
+      setNotice({ type: 'error', message: `項目の更新に失敗しました: ${error.message}` });
       return;
     }
 
-    setItems((current) => current.map((row) => (row.id === item.id ? { ...row, name: nextName } : row)));
-    setNotice({ type: 'success', message: '項目名を更新しました。' });
+    setItems((current) =>
+      current.map((row) => (row.id === item.id ? { ...row, name: nextName, category: nextCategory } : row)),
+    );
+    setNotice({ type: 'success', message: '項目を更新しました。' });
   }
 
-  async function archiveItem(itemId: string) {
+  async function moveItem(itemId: string, direction: -1 | 1) {
     if (!supabase) return;
-    const confirmed = window.confirm('この項目を非表示にしますか？過去のチェック履歴は残ります。');
-    if (!confirmed) return;
 
-    const { error } = await supabase.from('routine_items').update({ is_active: false }).eq('id', itemId);
+    const currentIndex = items.findIndex((item) => item.id === itemId);
+    const targetIndex = currentIndex + direction;
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= items.length) return;
+
+    const nextItems = [...items];
+    const [movedItem] = nextItems.splice(currentIndex, 1);
+    nextItems.splice(targetIndex, 0, movedItem);
+
+    const normalizedItems = nextItems.map((item, index) => ({
+      ...item,
+      sort_order: (index + 1) * 10,
+    }));
+
+    setItems(normalizedItems);
+
+    const results = await Promise.all(
+      normalizedItems.map((item) =>
+        supabase.from('routine_items').update({ sort_order: item.sort_order }).eq('id', item.id),
+      ),
+    );
+
+    const error = results.find((result) => result.error)?.error;
     if (error) {
-      setNotice({ type: 'error', message: `項目の非表示に失敗しました: ${error.message}` });
+      setNotice({ type: 'error', message: `順番の更新に失敗しました: ${error.message}` });
+      void loadData();
       return;
     }
+
+    setNotice({ type: 'success', message: '順番を更新しました。' });
+  }
+
+  async function deleteItem(itemId: string) {
+    if (!supabase) return;
+    const confirmed = window.confirm('この項目を削除しますか？過去のチェック履歴も削除されます。');
+    if (!confirmed) return;
+
+    const { error } = await supabase.from('routine_items').delete().eq('id', itemId);
+    if (error) {
+      setNotice({ type: 'error', message: `項目の削除に失敗しました: ${error.message}` });
+      return;
+    }
+
     setItems((current) => current.filter((item) => item.id !== itemId));
-    setNotice({ type: 'success', message: '項目を非表示にしました。' });
+    setCheckMap((current) => {
+      const nextMap: CheckMap = {};
+      Object.entries(current).forEach(([key, value]) => {
+        if (!key.startsWith(`${itemId}__`)) {
+          nextMap[key] = value;
+        }
+      });
+      return nextMap;
+    });
+    setEditingValues((current) => {
+      const nextValues = { ...current };
+      delete nextValues[itemId];
+      return nextValues;
+    });
+    setEditingCategories((current) => {
+      const nextValues = { ...current };
+      delete nextValues[itemId];
+      return nextValues;
+    });
+    setNotice({ type: 'success', message: '項目を削除しました。' });
   }
 
   function moveMonth(offset: number) {
@@ -421,6 +496,8 @@ export default function App() {
     setUnlocked(false);
     setItems([]);
     setCheckMap({});
+    setEditingValues({});
+    setEditingCategories({});
   }
 
   if (!isSupabaseConfigured || !isAuthConfigured) {
@@ -460,7 +537,6 @@ VITE_AUTH_APP_ID=routinecheck`}</pre>
           <div>
             <img className="brand-logo" src="/routinecheck-full.png" alt="RoutineCheck" />
             <h1 className="sr-only">RoutineCheck</h1>
-            <p>日々の実施項目を、クリックだけで記録します。</p>
           </div>
         </div>
         <div className="header-actions">
@@ -515,16 +591,32 @@ VITE_AUTH_APP_ID=routinecheck`}</pre>
           </form>
 
           <div className="item-editor-list">
-            {items.map((item) => (
+            {items.map((item, index) => (
               <div className="item-editor-row" key={item.id}>
+                <div className="sort-buttons">
+                  <button type="button" onClick={() => moveItem(item.id, -1)} disabled={index === 0}>
+                    ↑
+                  </button>
+                  <button type="button" onClick={() => moveItem(item.id, 1)} disabled={index === items.length - 1}>
+                    ↓
+                  </button>
+                </div>
                 <input
                   value={editingValues[item.id] ?? item.name}
                   onChange={(event) =>
                     setEditingValues((current) => ({ ...current, [item.id]: event.target.value }))
                   }
+                  placeholder="実施項目"
                 />
-                <button onClick={() => updateItemName(item)}>保存</button>
-                <button className="danger-button" onClick={() => archiveItem(item.id)}>非表示</button>
+                <input
+                  value={editingCategories[item.id] ?? item.category ?? ''}
+                  onChange={(event) =>
+                    setEditingCategories((current) => ({ ...current, [item.id]: event.target.value }))
+                  }
+                  placeholder="カテゴリ"
+                />
+                <button type="button" onClick={() => updateItem(item)}>保存</button>
+                <button type="button" className="danger-button" onClick={() => deleteItem(item.id)}>削除</button>
               </div>
             ))}
           </div>
