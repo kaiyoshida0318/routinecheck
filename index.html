@@ -133,6 +133,7 @@ tfoot .namecol{font-family:var(--sans);font-size:12px;left:0}
   .stat{min-width:52px;padding:0 6px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (hover:none){.insb{opacity:.8;transform:none;pointer-events:auto}}
 .cathead{display:flex;align-items:center;gap:6px;min-width:0}
 .cathead .cn{font-size:12px;font-weight:700;line-height:1.3;overflow-wrap:anywhere;color:var(--ink)}
 .cathead .cn.none{color:var(--muted);font-weight:500}
@@ -189,6 +190,16 @@ tr.draft input{border-color:var(--accent)}
 tr.addrow>*{border-bottom:none}
 .empty .addlink{margin-left:8px}
 @media (max-width:760px){.hright{justify-self:center}}
+.tablewrap{position:relative}
+#ins{position:absolute;inset:0;pointer-events:none;z-index:6}
+.insb{position:absolute;width:20px;height:20px;border-radius:50%;padding:0;display:grid;place-items:center;pointer-events:none;
+  background:var(--surface);color:var(--accent);border:1.5px solid var(--accent);opacity:0;transform:scale(.6);transition:opacity .12s,transform .12s,background .12s}
+.insb.on,.insb:focus-visible{opacity:1;transform:scale(1);pointer-events:auto}
+.insb svg{width:11px;height:11px}
+.insb.on:hover,.insb:focus-visible{background:var(--accent);color:#fff;transform:scale(1.15)}
+.insb.cat{color:var(--today);border-color:var(--today)}
+.insb.cat.on:hover,.insb.cat:focus-visible{background:var(--today);color:#fff}
+body.dragging #ins{display:none}
 </style>
 
 </head>
@@ -205,7 +216,10 @@ tr.addrow>*{border-bottom:none}
     <div class="hright"><button class="btn" id="editToggle" aria-pressed="false"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M10.5 2.5l3 3L6 13H3v-3z"/></svg>編集</button></div>
   </header>
 
-  <div class="tablebox" id="box"></div>
+  <div class="tablewrap">
+    <div class="tablebox" id="box"></div>
+    <div id="ins"></div>
+  </div>
 
   <div class="toolbar">
     <div class="legend">
@@ -352,10 +366,9 @@ function catCell(g,rows){
   let h='<td class="catcol" rowspan="'+rows+'" data-catcell="'+g.id+'" style="--hue:'+hue+'"><div class="cathead">';
   if(!g.cat){
     h+='<span class="cn none">未分類</span>';
-    if(editing)h+='<span class="cact">'+iconBtn('add',NONE,'未分類に項目を追加',PLUS)+'</span>';
   }else if(editing){
     h+=gripHtml('cat',g.id,'ドラッグで分類を並べ替え')+'<span class="cdot"></span><input type="text" class="cin" id="cn-'+g.id+'" value="'+esc(g.cat.name)+'" maxlength="20" aria-label="分類名">'+
-      '<span class="cact">'+iconBtn('add',g.id,'この分類に項目を追加',PLUS)+iconBtn('cdel',g.id,'分類を削除',TRASH,'del')+'</span>';
+      '<span class="cact">'+iconBtn('cdel',g.id,'分類を削除',TRASH,'del')+'</span>';
   }else{
     h+=gripHtml('cat',g.id,'ドラッグで分類を並べ替え')+'<span class="cdot"></span><span class="cn">'+esc(g.cat.name)+'</span>';
   }
@@ -392,7 +405,12 @@ function render(){
     html+='<th class="'+cls+'"'+(c.h?' title="'+esc(c.h)+'"':'')+'><span class="n">'+c.d+'</span><span class="w">'+(c.h?'祝':WD[c.w])+'</span></th>';
   }
   html+='<th class="stat">達成</th></tr></thead><tbody>';
+  const catDraft=editing&&draft&&draft.type==='cat';
+  const catDraftHtml=()=>'<tr class="draft catdraft gend" data-cat="_new"><td class="catcol" style="--hue:'+HUES[nextHue()]+'"><div class="cathead"><span class="cdot"></span><input type="text" id="dc" class="din cin" placeholder="新しい分類名" maxlength="20" aria-label="新しい分類名"></div></td>'+
+    '<th class="namecol" scope="row"><div class="erow hint"><button class="btn mini primary" data-act="dsave">分類を作る</button><button class="btn mini" data-act="dcancel">やめる</button><span>Enterで作成 / Escでやめる</span></div></th>'+blankCells(info)+'</tr>';
+  let catDraftDone=false;
   for(const g of gs){
+    if(catDraft&&!catDraftDone&&(draft.before===g.id||(draft.before===null&&g.id===NONE))){html+=catDraftHtml();catDraftDone=true;}
     const hasDraft=editing&&draft&&draft.type==='item'&&draft.cat===g.id;
     const rows=g.items.length+(hasDraft?1:0);
     if(!rows){
@@ -410,7 +428,7 @@ function render(){
       html+='<th class="namecol" scope="row">';
       if(editing){
         html+='<div class="edit"><div class="erow">'+gripHtml('item',it.id,'ドラッグで並べ替え')+'<input type="text" id="en-'+it.id+'" value="'+esc(it.name)+'" maxlength="60" aria-label="項目名">'+
-          iconBtn('add',g.id,'この下に項目を追加',PLUS,'',' data-after="'+it.id+'"')+iconBtn('del',it.id,'項目を削除',TRASH,'del')+'</div>'+
+          iconBtn('del',it.id,'項目を削除',TRASH,'del')+'</div>'+
           '<input type="url" id="eu-'+it.id+'" value="'+esc(it.url||'')+'" placeholder="リンク（任意）" aria-label="リンク"></div>';
       }else{
         const u=safeUrl(it.url||'');
@@ -426,12 +444,10 @@ function render(){
     });
     if(hasDraft&&draft.after===null)emitDraft();
   }
-  if(editing){
-    if(draft&&draft.type==='cat'){
-      html+='<tr class="draft catdraft" data-cat="_new"><td class="catcol" style="--hue:'+HUES[nextHue()]+'"><div class="cathead"><span class="cdot"></span><input type="text" id="dc" class="din cin" placeholder="分類名" maxlength="20" aria-label="新しい分類名"></div></td>'+
-        '<th class="namecol" scope="row"><div class="erow hint"><button class="btn mini primary" data-act="dsave">分類を作る</button><button class="btn mini" data-act="dcancel">やめる</button></div></th>'+blankCells(info)+'</tr>';
-    }else{
-      html+='<tr class="addrow"><td class="addcell" colspan="2"><button class="addlink" data-act="newcat">'+PLUS+'分類を追加</button>'+
+  if(catDraft&&!catDraftDone)html+=catDraftHtml();
+  if(editing&&!catDraft&&(!cats.length||!gs.some(g=>g.id===NONE))){
+    {
+      html+='<tr class="addrow"><td class="addcell" colspan="2">'+(cats.length?'':'<button class="addlink" data-act="newcat">'+PLUS+'分類を追加</button>')+
         (gs.some(g=>g.id===NONE)?'':'<button class="addlink" data-act="add" data-id="'+NONE+'">'+PLUS+'未分類で項目を追加</button>')+'</td><td colspan="'+(info.length+1)+'"></td></tr>';
     }
   }
@@ -450,8 +466,59 @@ function render(){
   const box=$('box'), sl=box.scrollLeft;
   box.innerHTML=html;
   box.scrollLeft=sl;
+  placeInserts();
   const d=$('dn')||$('dc');if(d)d.focus({preventScroll:false});
 }
+
+/* 行・分類の境目に出す「＋」（マウスを乗せた行の上下に表示） */
+let hover={r:null,g:null};
+function placeInserts(){
+  const layer=$('ins');
+  if(!editing){layer.innerHTML='';return;}
+  const box=$('box'), head=box.querySelector('thead .catcol');if(!head){layer.innerHTML='';return;}
+  const catW=head.offsetWidth, bt=box.offsetTop, bl=box.offsetLeft+1;
+  const rows=[...box.querySelectorAll('tbody tr')];
+  const out=[];
+  const btn=(x,y,k,attrs,label,cls)=>out.push('<button class="insb'+(cls?' '+cls:'')+'" data-k="'+k+'" style="left:'+(bl+x-10)+'px;top:'+(bt+y-10)+'px"'+attrs+' title="'+label+'" aria-label="'+label+'">'+PLUS+'</button>');
+  // 項目：各行の上と下
+  let prev=null;
+  rows.forEach(tr=>{
+    const cid=tr.dataset.cat, id=tr.dataset.item;
+    if(!cid||cid==='_new'||!id){prev=null;return;}
+    const top=tr.offsetTop, bottom=top+tr.offsetHeight;
+    const above=prev&&prev.cat===cid?prev.id:'_top';
+    btn(catW+22,top,'r:'+id,' data-ins="item" data-cat="'+cid+'" data-after="'+above+'"','上に項目を追加');
+    btn(catW+22,bottom,'r:'+id,' data-ins="item" data-cat="'+cid+'" data-after="'+id+'"','下に項目を追加');
+    prev={cat:cid,id};
+  });
+  // 分類：各分類の上と下
+  const span={};
+  rows.forEach(tr=>{const cid=tr.dataset.cat;if(!cid||cid===NONE||cid==='_new')return;
+    const t=tr.offsetTop,b=t+tr.offsetHeight;if(!span[cid])span[cid]={t,b};else span[cid].b=b;});
+  const ids=Object.keys(span);
+  ids.forEach((cid,i)=>{
+    btn(catW/2,span[cid].t,'g:'+cid,' data-ins="cat" data-before="'+cid+'"','上に分類を追加','cat');
+    btn(catW/2,span[cid].b,'g:'+cid,' data-ins="cat" data-before="'+(ids[i+1]||'')+'"','下に分類を追加','cat');
+  });
+  layer.innerHTML=out.join('');
+  showHover();
+}
+function showHover(){
+  $('ins').querySelectorAll('.insb').forEach(b=>b.classList.toggle('on',b.dataset.k===hover.r||b.dataset.k===hover.g));
+}
+$('box').addEventListener('mouseover',e=>{
+  if(!editing||drag)return;
+  const tr=e.target.closest('tbody tr');
+  const r=tr&&tr.dataset.item?'r:'+tr.dataset.item:null;
+  const g=tr&&tr.dataset.cat&&tr.dataset.cat!==NONE?'g:'+tr.dataset.cat:null;
+  if(r!==hover.r||g!==hover.g){hover={r,g};showHover();}
+});
+$('box').addEventListener('focusin',e=>{
+  const tr=e.target.closest('tbody tr');if(!tr||!editing)return;
+  hover={r:tr.dataset.item?'r:'+tr.dataset.item:null,g:tr.dataset.cat&&tr.dataset.cat!==NONE?'g:'+tr.dataset.cat:null};showHover();
+});
+window.addEventListener('resize',()=>{if(editing)placeInserts();});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(editing)placeInserts();});
 
 function scrollToToday(){
   const box=$('box'), th=box.querySelector('.dayh.today');
@@ -552,6 +619,9 @@ function commitDraft(){
     if(!name){draft=null;render();return;}
     if(cats.some(c=>c.name===name)){status('同じ名前の分類がすでにあります');$('dc').focus();return;}
     const id=resolveCat(name);
+    const c=cats.find(x=>x.id===id), list=sortedCats().filter(x=>x!==c);
+    let idx=list.length;if(draft.before){const i=list.findIndex(x=>x.id===draft.before);if(i>=0)idx=i;}
+    list.splice(idx,0,c);list.forEach((x,i)=>{const o=i+1;if(x.order!==o){x.order=o;saveDoc('cats',x);}});
     draft={type:'item',cat:id,after:null};   // 続けて中の項目を入力
     status('分類「'+name+'」を作りました');render();return;
   }
@@ -581,7 +651,7 @@ $('box').addEventListener('click',e=>{
   }
   const id=b.dataset.id, act=b.dataset.act;if(!act)return;
   if(act==='add'){draft={type:'item',cat:id,after:b.dataset.after||null};render();}
-  else if(act==='newcat'){draft={type:'cat'};render();}
+  else if(act==='newcat'){draft={type:'cat',before:null};render();}
   else if(act==='dsave'){commitDraft();}
   else if(act==='dcancel'){cancelDraft();}
   else if(act==='startedit'){setEditing(true);}
@@ -614,12 +684,18 @@ $('box').addEventListener('keydown',e=>{
   }else if(e.key==='Enter'){el.blur();}
 });
 function setEditing(on){
-  editing=on;draft=null;
+  editing=on;draft=null;if(!on)$('ins').innerHTML='';
   const b=$('editToggle');b.setAttribute('aria-pressed',on);b.classList.toggle('on',on);
   b.innerHTML=on?'完了':'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M10.5 2.5l3 3L6 13H3v-3z"/></svg>編集';
   render();
 }
 $('editToggle').addEventListener('click',()=>setEditing(!editing));
+$('ins').addEventListener('click',e=>{
+  const b=e.target.closest('.insb');if(!b)return;
+  if(b.dataset.ins==='item')draft={type:'item',cat:b.dataset.cat,after:b.dataset.after};
+  else draft={type:'cat',before:b.dataset.before||null};
+  render();
+});
 $('box').addEventListener('focusout',()=>{if(renderPending)setTimeout(()=>{if(renderPending)safeRender();},0);});
 function shift(n){view.m+=n;if(view.m<1){view.m=12;view.y--;}if(view.m>12){view.m=1;view.y++;}loadMonth();scrollToToday();}
 $('prev').onclick=()=>shift(-1);
