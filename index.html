@@ -27,6 +27,8 @@
   --sun:#C0463E;
   --danger:#C0463E;
   --focus:#4A90E2;
+  --catw:112px;
+  --line2:#B9C3CF;
   --mono:"DM Mono",ui-monospace,Menlo,monospace;
   --sans:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
 }
@@ -34,14 +36,14 @@
   :root:not([data-theme="light"]){
     color-scheme:dark;
     --bg:#11151B;--surface:#181D25;--ink:#E8EDF4;--muted:#98A2B3;--line:#2A313C;
-    --off:#0B0E13;--off-ink:#7D8797;--accent:#3FC49A;--accent-soft:#18372D;
+    --off:#0B0E13;--off-ink:#7D8797;--line2:#3D4757;--accent:#3FC49A;--accent-soft:#18372D;
     --today:#5AA2F0;--today-ink:#0B0E13;--sat:#83AEE8;--sun:#E88A82;--danger:#E88A82;--focus:#5AA2F0;
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
   --bg:#11151B;--surface:#181D25;--ink:#E8EDF4;--muted:#98A2B3;--line:#2A313C;
-  --off:#0B0E13;--off-ink:#7D8797;--accent:#3FC49A;--accent-soft:#18372D;
+  --off:#0B0E13;--off-ink:#7D8797;--line2:#3D4757;--accent:#3FC49A;--accent-soft:#18372D;
   --today:#5AA2F0;--today-ink:#0B0E13;--sat:#83AEE8;--sun:#E88A82;--danger:#E88A82;--focus:#5AA2F0;
 }
 *{box-sizing:border-box}
@@ -76,7 +78,9 @@ input::placeholder{color:var(--muted)}
 table{width:100%;border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums}
 th,td{padding:0;border-bottom:1px solid var(--line);text-align:center}
 thead th{position:sticky;top:0;background:var(--surface);z-index:2}
-.namecol{position:sticky;left:0;z-index:3;background:var(--surface);text-align:left;width:200px;min-width:160px;max-width:240px;border-right:1px solid var(--line);padding:6px 12px}
+.catcol{position:sticky;left:0;z-index:3;background:color-mix(in srgb,var(--hue) 7%,var(--surface));text-align:left;width:var(--catw);min-width:var(--catw);max-width:var(--catw);border-right:1px solid var(--line);padding:6px 8px;vertical-align:middle}
+.namecol{position:sticky;left:var(--catw);z-index:3;background:var(--surface);text-align:left;width:200px;min-width:150px;max-width:240px;border-right:1px solid var(--line);padding:6px 12px}
+thead .catcol{z-index:4;font-size:12px;color:var(--muted);font-weight:500;vertical-align:bottom;background:var(--surface)}
 thead .namecol{z-index:4;font-size:12px;color:var(--muted);font-weight:500;vertical-align:bottom}
 .dayh{min-width:30px;padding:6px 0 4px;line-height:1.15}
 .dayh .n{display:block;font-family:var(--mono);font-size:13px;font-weight:500}
@@ -100,17 +104,18 @@ td.cell.today{box-shadow:inset 1px 0 0 var(--today),inset -1px 0 0 var(--today)}
 thead .stat{z-index:4;font-family:var(--sans);font-weight:500;vertical-align:bottom;padding-bottom:6px}
 .stat b{color:var(--ink);font-weight:500}
 .iname{display:flex;align-items:center;gap:6px;min-width:0}
-.iname span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.iname .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
 .iname a{flex:none;display:inline-grid;place-items:center;width:22px;height:22px;border-radius:5px;color:var(--accent);text-decoration:none}
 .iname a:hover{background:var(--accent-soft)}
 .iname a svg{width:14px;height:14px}
 tfoot td{border-bottom:none;font-family:var(--mono);font-size:11px;color:var(--muted);height:30px}
-tfoot .namecol{font-family:var(--sans);font-size:12px}
+tfoot .namecol{font-family:var(--sans);font-size:12px;left:0}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line)}
 .dot.part{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
 .dot.full{background:var(--accent)}
 .edit{display:flex;flex-direction:column;gap:4px;padding-block:4px}
-.edit input{width:100%;font-size:13px;padding:4px 8px}
+.namecol{font-weight:400}
+.edit input{width:100%;font-size:13px;padding:4px 8px;font-weight:400}
 .edit .row{display:flex;gap:4px}
 .edit .row .btn{padding:2px 8px;font-size:12px}
 .edit .row .del{color:var(--danger);margin-left:auto}
@@ -123,10 +128,35 @@ tfoot .namecol{font-family:var(--sans);font-size:12px}
 }
 @media (max-width:600px){
   .monthnav h1{font-size:20px;min-width:7.5em}
-  .namecol{min-width:130px;max-width:150px}
+  :root{--catw:78px}
+  .namecol{min-width:120px;max-width:140px}
   .stat{min-width:52px;padding:0 6px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.cathead{display:flex;align-items:center;gap:6px;min-width:0}
+.cathead .cn{font-size:12px;font-weight:700;line-height:1.3;overflow-wrap:anywhere;color:var(--ink)}
+.cathead .cn.none{color:var(--muted);font-weight:500}
+.cdot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--hue)}
+.grip{flex:none;display:inline-grid;place-items:center;width:18px;height:24px;margin-left:-4px;border-radius:4px;color:var(--muted);cursor:grab;touch-action:none;opacity:.35;transition:opacity .12s,background .12s}
+.grip svg{width:10px;height:14px}
+tr:hover .grip,.catcol:hover .grip{opacity:1}
+.grip:hover{background:var(--off)}
+tr.gend>*{border-bottom:1.5px solid var(--line2)}
+tbody tr:last-child>*{border-bottom:none}
+tr.emptyrow .namecol{color:var(--muted);font-size:12px}
+body.dragging,body.dragging *{cursor:grabbing!important;user-select:none!important}
+tr.dragsrc>*:not(.catcol){opacity:.35}
+.catcol.dropin{box-shadow:inset 0 0 0 2px var(--today)}
+#dropline{position:fixed;height:3px;border-radius:2px;background:var(--today);pointer-events:none;z-index:50}
+#ghost{position:fixed;z-index:51;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;font-weight:700;padding:5px 10px;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.2);transform:translate(12px,-50%);white-space:nowrap}
+.catedit{display:flex;flex-direction:column;gap:4px}
+.catedit input{width:100%;font-size:12px;padding:3px 6px}
+.catedit .row{display:flex;gap:4px;flex-wrap:wrap}
+.catedit .btn{padding:1px 6px;font-size:11px}
+.catedit .del{color:var(--danger)}
+#newCat{flex:0 1 150px}
+form.catform{display:flex;gap:8px;align-items:center}
+form.catform input{width:180px}
 </style>
 
 </head>
@@ -144,12 +174,19 @@ tfoot .namecol{font-family:var(--sans);font-size:12px}
 
   <div class="toolbar">
     <form class="add" id="addForm" autocomplete="off">
-      <input type="text" id="newName" placeholder="実施項目（例: 朝ストレッチ 10分）" maxlength="60" required>
-      <input type="url" id="newUrl" placeholder="リンク（任意）https://…">
+      <input type="text" id="newCat" list="catList" placeholder="分類（任意）" maxlength="20" aria-label="分類">
+      <input type="text" id="newName" placeholder="実施項目（例: 朝ストレッチ 10分）" maxlength="60" required aria-label="実施項目">
+      <input type="url" id="newUrl" placeholder="リンク（任意）https://…" aria-label="リンク">
       <button class="btn primary" type="submit">追加</button>
     </form>
     <button class="btn" id="editToggle" aria-pressed="false">項目を編集</button>
   </div>
+  <form class="catform" id="catForm" autocomplete="off" hidden>
+    <input type="text" id="catName" placeholder="新しい分類名" maxlength="20" aria-label="新しい分類名">
+    <button class="btn" type="submit">分類を追加</button>
+    <span class="status">分類名は左の列で直接変更できます。削除すると中の項目は「未分類」に移ります。</span>
+  </form>
+  <datalist id="catList"></datalist>
 
   <div class="tablebox" id="box"></div>
 
@@ -159,11 +196,14 @@ tfoot .namecol{font-family:var(--sans);font-size:12px}
       <span><i style="background:var(--today);border-color:var(--today)"></i>今日</span>
       <span><span class="dot full"></span> 全部できた日</span>
       <span><span class="dot part"></span> 一部できた日</span>
+      <span>⠿ をドラッグで並べ替え</span>
     </div>
     <div class="status" id="status">読み込み中…</div>
   </div>
   <div class="holname" id="holList"></div>
 </div>
+<div id="dropline" hidden></div>
+<div id="ghost" hidden></div>
 
 <script>
 (function(){
@@ -205,18 +245,25 @@ function holiday(y,m,d){return (holCache[y]||(holCache[y]=holidaysOf(y))).get(m+
 const WD='日月火水木金土';
 const now=new Date();
 let view={y:now.getFullYear(),m:now.getMonth()+1};
-let items=[];            // [{id,name,url,order}]
+let items=[];            // [{id,name,url,cat,order}]
+let cats=[];             // [{id,name,order}]
 let checks={};           // {itemId:{"1":true}}
 let editing=false;
 let db=null, unsubMonth=null, local=false;
+let drag=null, renderPending=false;
+const NONE='_none';
+const HUES=['#4A90E2','#2A9C78','#E0A33A','#C0463E','#8A63D2','#3AA7B8','#D46A9C','#7A8B3A'];
 const $=id=>document.getElementById(id);
 const pad=n=>String(n).padStart(2,'0');
 const monthKey=()=>view.y+'-'+pad(view.m);
 const status=t=>{$('status').textContent=t;};
+const newId=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function hueOf(c){if(Number.isInteger(c.hue))return HUES[c.hue%HUES.length];let h=0;for(const ch of String(c.id))h=(h*31+ch.charCodeAt(0))>>>0;return HUES[h%HUES.length];}
+function nextHue(){const used=cats.map(c=>c.hue);for(let i=0;i<HUES.length;i++)if(!used.includes(i))return i;return cats.length%HUES.length;}
 
 /* ---------- 保存層（db / 端末内フォールバック） ---------- */
 const LS='routinecheck-v1';
-function lsRead(){try{return JSON.parse(localStorage.getItem(LS))||{items:[],months:{}};}catch(e){return {items:[],months:{}};}}
+function lsRead(){try{const s=JSON.parse(localStorage.getItem(LS))||{};return {items:s.items||[],cats:s.cats||[],months:s.months||{}};}catch(e){return {items:[],cats:[],months:{}};}}
 function lsWrite(s){try{localStorage.setItem(LS,JSON.stringify(s));}catch(e){}}
 
 let writing=false, dirty=false;
@@ -228,14 +275,15 @@ async function saveMonth(){
   catch(e){status(e.code==='invalid_argument'?'このページは閲覧のみです':'保存できませんでした。もう一度お試しください');}
   writing=false;if(dirty){dirty=false;saveMonth();}
 }
-async function saveItem(it){
-  if(local){const s=lsRead();const i=s.items.findIndex(x=>x.id===it.id);if(i>=0)s.items[i]=it;else s.items.push(it);lsWrite(s);return;}
-  try{await db.doc('items/'+it.id).set({name:it.name,url:it.url||'',order:it.order});status('保存しました');}
-  catch(e){status('項目を保存できませんでした');}
+function bodyOf(coll,o){return coll==='items'?{name:o.name,url:o.url||'',cat:o.cat||'',order:o.order}:{name:o.name,order:o.order,hue:Number.isInteger(o.hue)?o.hue:null};}
+async function saveDoc(coll,o){
+  if(local){const s=lsRead();const a=s[coll];const i=a.findIndex(x=>x.id===o.id);const v={id:o.id,...bodyOf(coll,o)};if(i>=0)a[i]=v;else a.push(v);lsWrite(s);return;}
+  try{await db.doc(coll+'/'+o.id).set(bodyOf(coll,o));status('保存しました');}
+  catch(e){status('保存できませんでした');}
 }
-async function removeItem(id){
-  if(local){const s=lsRead();s.items=s.items.filter(x=>x.id!==id);lsWrite(s);return;}
-  try{await db.doc('items/'+id).delete();status('削除しました');}catch(e){status('削除できませんでした');}
+async function removeDoc(coll,id){
+  if(local){const s=lsRead();s[coll]=s[coll].filter(x=>x.id!==id);lsWrite(s);return;}
+  try{await db.doc(coll+'/'+id).delete();status('削除しました');}catch(e){status('削除できませんでした');}
 }
 
 function loadMonth(){
@@ -245,23 +293,57 @@ function loadMonth(){
   const key=monthKey();
   unsubMonth=db.doc('months/'+key).onSnapshot(s=>{
     if(key!==monthKey())return;
-    if(writing||dirty)return; // 自分の書き込み中は手元の状態を優先
+    if(writing||dirty)return;
     const d=s.exists?s.data():null;
     checks=d&&d.checks?JSON.parse(JSON.stringify(d.checks)):{};
-    render();
+    safeRender();
   },e=>status('同期が止まりました。再読み込みしてください'));
   render();
+}
+
+/* ---------- 分類 ---------- */
+const sortedCats=()=>[...cats].sort((a,b)=>a.order-b.order);
+function catOf(it){return it.cat&&cats.some(c=>c.id===it.cat)?it.cat:NONE;}
+function itemsIn(cid){return items.filter(it=>catOf(it)===cid).sort((a,b)=>a.order-b.order);}
+function groups(){
+  const gs=sortedCats().map(c=>({id:c.id,cat:c,items:itemsIn(c.id)}));
+  const none=itemsIn(NONE);
+  if(none.length)gs.push({id:NONE,cat:null,items:none});
+  return gs;
+}
+function resolveCat(name){
+  name=(name||'').trim();if(!name)return '';
+  const hit=cats.find(c=>c.name===name);if(hit)return hit.id;
+  const c={id:newId('c'),name,hue:nextHue(),order:cats.reduce((m,x)=>Math.max(m,x.order),0)+1};
+  cats.push(c);saveDoc('cats',c);return c.id;
 }
 
 /* ---------- 描画 ---------- */
 const CHECK='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color:#fff"><path d="M3.5 8.5l3 3 6-7"/></svg>';
 const LINK='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h4v4M13 3L7.5 8.5M11 9.5V13H3V5h3.5"/></svg>';
+const GRIP='<svg viewBox="0 0 10 14" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.3"/><circle cx="7.5" cy="2.5" r="1.3"/><circle cx="2.5" cy="7" r="1.3"/><circle cx="7.5" cy="7" r="1.3"/><circle cx="2.5" cy="11.5" r="1.3"/><circle cx="7.5" cy="11.5" r="1.3"/></svg>';
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function safeUrl(u){try{const x=new URL(u);return /^https?:$/.test(x.protocol)?x.href:'';}catch(e){return '';}}
+function safeRender(){if(drag){renderPending=true;return;}const a=document.activeElement;if(editing&&a&&a.tagName==='INPUT'&&a.closest('#box')){renderPending=true;return;}render();}
+
+function catCell(g,rows){
+  const hue=g.cat?hueOf(g.cat):'var(--muted)';
+  let h='<td class="catcol" rowspan="'+rows+'" data-catcell="'+g.id+'" style="--hue:'+hue+'">';
+  if(!g.cat){h+='<div class="cathead"><span class="cn none">未分類</span></div>';}
+  else if(editing){
+    h+='<div class="catedit"><input type="text" id="cn-'+g.id+'" value="'+esc(g.cat.name)+'" maxlength="20" aria-label="分類名"><div class="row">'+
+      '<button class="btn" data-act="csave" data-id="'+g.id+'">保存</button><button class="btn del" data-act="cdel" data-id="'+g.id+'">削除</button></div></div>';
+  }else{
+    h+='<div class="cathead"><span class="grip" data-drag="cat" data-id="'+g.id+'" title="ドラッグで分類を並べ替え">'+GRIP+'</span><span class="cdot"></span><span class="cn">'+esc(g.cat.name)+'</span></div>';
+  }
+  return h+'</td>';
+}
 
 function render(){
+  renderPending=false;
   const {y,m}=view, days=new Date(y,m,0).getDate();
   $('title').innerHTML='<span class="y">'+y+'</span>'+m+'月';
+  $('catList').innerHTML=sortedCats().map(c=>'<option value="'+esc(c.name)+'">').join('');
   const t=new Date(), isThis=t.getFullYear()===y&&t.getMonth()+1===m, today=t.getDate();
   const past=(y*12+m)<(t.getFullYear()*12+t.getMonth()+1);
   const elapsed=isThis?today:(past?days:0);
@@ -272,45 +354,53 @@ function render(){
     info.push({d,w,h,off:w===0||w===6||!!h,today:isThis&&d===today,future:(isThis&&d>today)||(!past&&!isThis)});
   }
   $('holList').textContent=hols.length?'今月の祝日: '+hols.join('　'):'';
-  const list=[...items].sort((a,b)=>a.order-b.order);
-  let html='<table><thead><tr><th class="namecol">項目</th>';
+  const gs=groups();
+  let html='<table><thead><tr><th class="catcol">分類</th><th class="namecol">項目</th>';
   for(const c of info){
     const cls=['dayh',c.off?'off':'',c.w===6?'sat':'',c.w===0?'sun':'',c.h?'hol':'',c.today?'today':''].join(' ');
     html+='<th class="'+cls+'"'+(c.h?' title="'+esc(c.h)+'"':'')+'><span class="n">'+c.d+'</span><span class="w">'+(c.h?'祝':WD[c.w])+'</span></th>';
   }
   html+='<th class="stat">達成</th></tr></thead><tbody>';
-  list.forEach((it,idx)=>{
-    const ck=checks[it.id]||{};let cnt=0;
-    html+='<tr><th class="namecol" scope="row">';
-    if(editing){
-      html+='<div class="edit" data-id="'+it.id+'"><input type="text" id="en-'+it.id+'" value="'+esc(it.name)+'" maxlength="60" aria-label="項目名"><input type="url" id="eu-'+it.id+'" value="'+esc(it.url||'')+'" placeholder="リンク（任意）" aria-label="リンク"><div class="row">'+
-        '<button class="btn" data-act="up" data-id="'+it.id+'" '+(idx===0?'disabled':'')+' aria-label="上へ">↑</button>'+
-        '<button class="btn" data-act="down" data-id="'+it.id+'" '+(idx===list.length-1?'disabled':'')+' aria-label="下へ">↓</button>'+
-        '<button class="btn" data-act="save" data-id="'+it.id+'">保存</button>'+
-        '<button class="btn del" data-act="del" data-id="'+it.id+'">削除</button></div></div>';
-    }else{
-      const u=safeUrl(it.url||'');
-      html+='<div class="iname"><span title="'+esc(it.name)+'">'+esc(it.name)+'</span>'+(u?'<a href="'+esc(u)+'" target="_blank" rel="noopener" aria-label="'+esc(it.name)+'のリンクを開く">'+LINK+'</a>':'')+'</div>';
+  for(const g of gs){
+    if(!g.items.length){
+      html+='<tr class="emptyrow gend" data-cat="'+g.id+'">'+catCell(g,1)+'<th class="namecol" scope="row">ここへ項目をドラッグ</th>';
+      for(const c of info)html+='<td class="cell'+(c.off?' off':'')+(c.today?' today':'')+'"></td>';
+      html+='<td class="stat"></td></tr>';continue;
     }
-    html+='</th>';
-    for(const c of info){
-      const on=!!ck[c.d];if(on)cnt++;
-      html+='<td class="cell'+(c.off?' off':'')+(c.today?' today':'')+'"><button class="chk'+(c.future?' future':'')+'" data-item="'+it.id+'" data-day="'+c.d+'" aria-pressed="'+on+'" aria-label="'+esc(it.name)+' '+m+'月'+c.d+'日">'+CHECK+'</button></td>';
-    }
-    html+='<td class="stat"><b>'+cnt+'</b>/'+(elapsed||days)+'</td></tr>';
-  });
+    g.items.forEach((it,idx)=>{
+      const ck=checks[it.id]||{};let cnt=0;
+      html+='<tr data-item="'+it.id+'" data-cat="'+g.id+'"'+(idx===g.items.length-1?' class="gend"':'')+'>';
+      if(idx===0)html+=catCell(g,g.items.length);
+      html+='<th class="namecol" scope="row">';
+      if(editing){
+        const cn=g.cat?g.cat.name:'';
+        html+='<div class="edit"><input type="text" id="en-'+it.id+'" value="'+esc(it.name)+'" maxlength="60" aria-label="項目名"><input type="url" id="eu-'+it.id+'" value="'+esc(it.url||'')+'" placeholder="リンク（任意）" aria-label="リンク"><input type="text" id="ec-'+it.id+'" list="catList" value="'+esc(cn)+'" placeholder="分類（任意）" maxlength="20" aria-label="分類"><div class="row">'+
+          '<button class="btn" data-act="save" data-id="'+it.id+'">保存</button>'+
+          '<button class="btn del" data-act="del" data-id="'+it.id+'">削除</button></div></div>';
+      }else{
+        const u=safeUrl(it.url||'');
+        html+='<div class="iname"><span class="grip" data-drag="item" data-id="'+it.id+'" title="ドラッグで並べ替え">'+GRIP+'</span><span class="nm" title="'+esc(it.name)+'">'+esc(it.name)+'</span>'+(u?'<a href="'+esc(u)+'" target="_blank" rel="noopener" aria-label="'+esc(it.name)+'のリンクを開く">'+LINK+'</a>':'')+'</div>';
+      }
+      html+='</th>';
+      for(const c of info){
+        const on=!!ck[c.d];if(on)cnt++;
+        html+='<td class="cell'+(c.off?' off':'')+(c.today?' today':'')+'"><button class="chk'+(c.future?' future':'')+'" data-item="'+it.id+'" data-day="'+c.d+'" aria-pressed="'+on+'" aria-label="'+esc(it.name)+' '+m+'月'+c.d+'日">'+CHECK+'</button></td>';
+      }
+      html+='<td class="stat"><b>'+cnt+'</b>/'+(elapsed||days)+'</td></tr>';
+    });
+  }
   html+='</tbody>';
-  if(list.length){
-    html+='<tfoot><tr><td class="namecol">その日の達成</td>';
+  if(items.length){
+    html+='<tfoot><tr><td class="namecol" colspan="2">その日の達成</td>';
     for(const c of info){
-      const n=list.filter(it=>(checks[it.id]||{})[c.d]).length;
-      const cls=n===0?'':(n===list.length?'full':'part');
-      html+='<td class="'+(c.off?'off':'')+'" title="'+n+'/'+list.length+'"><span class="dot '+cls+'"></span></td>';
+      const n=items.filter(it=>(checks[it.id]||{})[c.d]).length;
+      const cls=n===0?'':(n===items.length?'full':'part');
+      html+='<td class="'+(c.off?'off':'')+'" title="'+n+'/'+items.length+'"><span class="dot '+cls+'"></span></td>';
     }
     html+='<td class="stat"></td></tr></tfoot>';
   }
   html+='</table>';
-  if(!list.length)html+='<div class="empty">まだ項目がありません。上のフォームから毎日やりたいことを追加してください。</div>';
+  if(!gs.length)html+='<div class="empty">まだ項目がありません。上のフォームから毎日やりたいことを追加してください。</div>';
   const box=$('box'), sl=box.scrollLeft;
   box.innerHTML=html;
   box.scrollLeft=sl;
@@ -320,6 +410,91 @@ function scrollToToday(){
   const box=$('box'), th=box.querySelector('.dayh.today');
   if(th){box.scrollLeft=Math.max(0,th.offsetLeft-box.clientWidth/2);}else box.scrollLeft=0;
 }
+
+/* ---------- ドラッグで並べ替え ---------- */
+const line=$('dropline'), ghost=$('ghost');
+function clearMarks(){line.hidden=true;document.querySelectorAll('.dropin').forEach(e=>e.classList.remove('dropin'));}
+function showLine(yPos){const r=$('box').getBoundingClientRect();line.style.left=r.left+'px';line.style.width=r.width+'px';line.style.top=(yPos-1.5)+'px';line.hidden=false;}
+function groupRect(cid){
+  const rows=[...$('box').querySelectorAll('tbody tr[data-cat="'+cid+'"]')];
+  if(!rows.length)return null;
+  return {top:rows[0].getBoundingClientRect().top,bottom:rows[rows.length-1].getBoundingClientRect().bottom};
+}
+function findTarget(x,y){
+  const el=document.elementFromPoint(x,y);const tr=el&&el.closest('#box tbody tr');
+  clearMarks();
+  if(!tr)return null;
+  const cid=tr.dataset.cat;
+  if(drag.type==='item'){
+    const cell=el.closest('.catcol');
+    if(cell||!tr.dataset.item){
+      const cc=$('box').querySelector('[data-catcell="'+cid+'"]');if(cc)cc.classList.add('dropin');
+      const gr=groupRect(cid);if(gr)showLine(gr.bottom);
+      return {cat:cid,ref:null};
+    }
+    const r=tr.getBoundingClientRect(), before=y<r.top+r.height/2;
+    showLine(before?r.top:r.bottom);
+    return {cat:cid,ref:tr.dataset.item,before};
+  }
+  const gr=groupRect(cid);if(!gr)return null;
+  const before=cid===NONE?true:y<(gr.top+gr.bottom)/2;
+  showLine(before?gr.top:gr.bottom);
+  return {ref:cid,before};
+}
+function applyItemDrop(t){
+  const it=items.find(x=>x.id===drag.id);if(!it)return;
+  const list=itemsIn(t.cat).filter(x=>x!==it);
+  let idx=list.length;
+  if(t.ref){const i=list.findIndex(x=>x.id===t.ref);if(i>=0)idx=i+(t.before?0:1);}
+  list.splice(idx,0,it);
+  const newCat=t.cat===NONE?'':t.cat;
+  const moved=catOf(it)!==t.cat;
+  it.cat=newCat;
+  list.forEach((x,i)=>{const o=i+1;if(x.order!==o||(x===it&&moved)){x.order=o;saveDoc('items',x);}});
+}
+function applyCatDrop(t){
+  const c=cats.find(x=>x.id===drag.id);if(!c||t.ref===c.id)return;
+  const list=sortedCats().filter(x=>x!==c);
+  let idx=list.length;
+  if(t.ref!==NONE){const i=list.findIndex(x=>x.id===t.ref);if(i>=0)idx=i+(t.before?0:1);}
+  list.splice(idx,0,c);
+  list.forEach((x,i)=>{const o=i+1;if(x.order!==o){x.order=o;saveDoc('cats',x);}});
+}
+let scrollTimer=null;
+function autoScroll(y){
+  clearInterval(scrollTimer);
+  const edge=60,h=window.innerHeight;let dy=0;
+  if(y<edge)dy=-12;else if(y>h-edge)dy=12;
+  if(dy)scrollTimer=setInterval(()=>{window.scrollBy(0,dy);if(drag&&drag.last)drag.target=findTarget(drag.last.x,drag.last.y);},16);
+}
+$('box').addEventListener('pointerdown',e=>{
+  const g=e.target.closest('.grip');if(!g||e.button>0)return;
+  e.preventDefault();
+  const type=g.dataset.drag,id=g.dataset.id;
+  const label=type==='item'?(items.find(x=>x.id===id)||{}).name:(cats.find(x=>x.id===id)||{}).name;
+  drag={type,id,target:null,last:{x:e.clientX,y:e.clientY}};
+  ghost.textContent=(type==='cat'?'分類: ':'')+(label||'');ghost.hidden=false;
+  ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';
+  document.body.classList.add('dragging');
+  const sel=type==='item'?'tbody tr[data-item="'+id+'"]':'tbody tr[data-cat="'+id+'"]';
+  $('box').querySelectorAll(sel).forEach(r=>r.classList.add('dragsrc'));
+});
+window.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  drag.last={x:e.clientX,y:e.clientY};
+  ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';
+  drag.target=findTarget(e.clientX,e.clientY);
+  autoScroll(e.clientY);
+});
+function endDrag(apply){
+  if(!drag)return;
+  clearInterval(scrollTimer);clearMarks();ghost.hidden=true;document.body.classList.remove('dragging');
+  if(apply&&drag.target){if(drag.type==='item')applyItemDrop(drag.target);else applyCatDrop(drag.target);}
+  drag=null;render();
+}
+window.addEventListener('pointerup',()=>endDrag(true));
+window.addEventListener('pointercancel',()=>endDrag(false));
+window.addEventListener('keydown',e=>{if(e.key==='Escape')endDrag(false);});
 
 /* ---------- 操作 ---------- */
 $('box').addEventListener('click',e=>{
@@ -331,32 +506,49 @@ $('box').addEventListener('click',e=>{
     render();saveMonth();return;
   }
   const id=b.dataset.id, act=b.dataset.act;if(!act)return;
-  const list=[...items].sort((a,b)=>a.order-b.order), i=list.findIndex(x=>x.id===id);
   if(act==='save'){
+    const it=items.find(x=>x.id===id);if(!it)return;
     const name=$('en-'+id).value.trim();if(!name){status('項目名を入力してください');return;}
-    const it=list[i];it.name=name;it.url=$('eu-'+id).value.trim();saveItem(it);render();
+    const newCat=resolveCat($('ec-'+id).value);
+    if((it.cat||'')!==newCat&&catOf(it)!==(newCat||NONE)){it.order=itemsIn(newCat||NONE).reduce((mx,x)=>Math.max(mx,x.order),0)+1;}
+    it.name=name;it.url=$('eu-'+id).value.trim();it.cat=newCat;saveDoc('items',it);status('保存しました');render();
   }else if(act==='del'){
-    if(b.dataset.confirm){items=items.filter(x=>x.id!==id);removeItem(id);render();}
+    if(b.dataset.confirm){items=items.filter(x=>x.id!==id);removeDoc('items',id);render();}
     else{b.dataset.confirm='1';b.textContent='本当に削除';b.classList.add('on');}
-  }else if(act==='up'||act==='down'){
-    const j=act==='up'?i-1:i+1;if(j<0||j>=list.length)return;
-    const a=list[i],c=list[j],o=a.order;a.order=c.order;c.order=o;
-    if(a.order===c.order){a.order=j;c.order=i;}
-    saveItem(a);saveItem(c);render();
+  }else if(act==='csave'){
+    const c=cats.find(x=>x.id===id);if(!c)return;
+    const name=$('cn-'+id).value.trim();if(!name){status('分類名を入力してください');return;}
+    if(cats.some(x=>x!==c&&x.name===name)){status('同じ名前の分類がすでにあります');return;}
+    c.name=name;saveDoc('cats',c);status('保存しました');render();
+  }else if(act==='cdel'){
+    if(b.dataset.confirm){
+      let o=itemsIn(NONE).reduce((mx,x)=>Math.max(mx,x.order),0);
+      itemsIn(id).forEach(it=>{it.cat='';it.order=++o;saveDoc('items',it);});
+      cats=cats.filter(x=>x.id!==id);removeDoc('cats',id);render();
+    }else{b.dataset.confirm='1';b.textContent='本当に削除';b.classList.add('on');}
   }
 });
 $('addForm').addEventListener('submit',e=>{
   e.preventDefault();
   const name=$('newName').value.trim();if(!name)return;
-  let url=$('newUrl').value.trim();
-  const it={id:'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),name,url,order:items.reduce((mx,x)=>Math.max(mx,x.order),0)+1};
-  items.push(it);saveItem(it);render();
+  const cat=resolveCat($('newCat').value);
+  const url=$('newUrl').value.trim();
+  const it={id:newId('i'),name,url,cat,order:itemsIn(cat||NONE).reduce((mx,x)=>Math.max(mx,x.order),0)+1};
+  items.push(it);saveDoc('items',it);render();
   $('newName').value='';$('newUrl').value='';$('newName').focus();
+});
+$('catForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const name=$('catName').value.trim();if(!name)return;
+  if(cats.some(c=>c.name===name)){status('同じ名前の分類がすでにあります');return;}
+  resolveCat(name);$('catName').value='';render();
 });
 $('editToggle').addEventListener('click',()=>{
   editing=!editing;$('editToggle').setAttribute('aria-pressed',editing);
-  $('editToggle').classList.toggle('on',editing);$('editToggle').textContent=editing?'編集を終える':'項目を編集';render();
+  $('editToggle').classList.toggle('on',editing);$('editToggle').textContent=editing?'編集を終える':'項目を編集';
+  $('catForm').hidden=!editing;render();
 });
+$('box').addEventListener('focusout',()=>{if(renderPending)setTimeout(()=>{if(renderPending)safeRender();},0);});
 function shift(n){view.m+=n;if(view.m<1){view.m=12;view.y--;}if(view.m>12){view.m=1;view.y++;}loadMonth();scrollToToday();}
 $('prev').onclick=()=>shift(-1);
 $('next').onclick=()=>shift(1);
@@ -365,7 +557,7 @@ $('todayBtn').onclick=()=>{const t=new Date();view={y:t.getFullYear(),m:t.getMon
 /* ---------- 起動 ---------- */
 render();scrollToToday();
 function startLocal(){
-  local=true;const s=lsRead();items=s.items;status('この端末のブラウザに保存しています');loadMonth();scrollToToday();
+  local=true;const s=lsRead();items=s.items;cats=s.cats;status('この端末のブラウザに保存しています');loadMonth();scrollToToday();
 }
 (async()=>{
   let ns=null;
@@ -374,10 +566,12 @@ function startLocal(){
   db=ns;status('同期しています');
   let first=true;
   db.collection('items').onSnapshot(s=>{
-    items=s.docs.map(d=>{const x=d.data();return {id:d.id,name:String(x.name||''),url:String(x.url||''),order:Number(x.order)||0};});
-    const active=document.activeElement;
-    if(editing&&active&&active.tagName==='INPUT'&&active.closest('#box'))return; // 入力中は描き直さない
-    render();if(first){first=false;scrollToToday();}
+    items=s.docs.map(d=>{const x=d.data();return {id:d.id,name:String(x.name||''),url:String(x.url||''),cat:String(x.cat||''),order:Number(x.order)||0};});
+    safeRender();if(first){first=false;scrollToToday();}
+  },e=>status('同期が止まりました。再読み込みしてください'));
+  db.collection('cats').onSnapshot(s=>{
+    cats=s.docs.map(d=>{const x=d.data();return {id:d.id,name:String(x.name||''),order:Number(x.order)||0,hue:Number.isInteger(x.hue)?x.hue:null};});
+    safeRender();
   },e=>status('同期が止まりました。再読み込みしてください'));
   loadMonth();
 })();
