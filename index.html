@@ -239,6 +239,13 @@ table.editing .evbar:hover{filter:brightness(1.08);box-shadow:0 0 0 2px color-mi
 .evbtns{display:flex;gap:8px;align-items:center}
 .evbtns span{flex:1}
 .evbtns .del{color:var(--danger)}
+/* 見やすさ：日付の縦線・行ハイライト */
+:root{--grid:color-mix(in srgb,var(--line) 75%,var(--surface));--hl:color-mix(in srgb,var(--today) 8%,transparent)}
+td.cell,th.dayh,tfoot td:not(.namecol):not(.stat),thead tr.evrow th:not(.catcol):not(.namecol):not(.stat){border-right:1px solid var(--grid)}
+th.dayh.w-mon,td.cell.w-mon,tfoot td.w-mon{border-left:1px solid var(--line2)}
+tbody tr[data-item]:hover>td.cell,tbody tr[data-item]:hover>.namecol,tbody tr[data-item]:hover>.stat{background-image:linear-gradient(var(--hl),var(--hl))}
+tbody tr[data-item]:hover>.namecol .nm{color:var(--today)}
+td.cell.today{background-image:linear-gradient(color-mix(in srgb,var(--today) 6%,transparent),color-mix(in srgb,var(--today) 6%,transparent))}
 </style>
 
 </head>
@@ -435,7 +442,7 @@ function catCell(g,rows){
   }
   return h+'</div></td>';
 }
-function blankCells(info,extra){let h='';for(const c of info)h+='<td class="cell'+(c.off?' off':'')+(c.today?' today':'')+'"></td>';return h+'<td class="stat">'+(extra||'')+'</td>';}
+function blankCells(info,extra){let h='';for(const c of info)h+='<td class="cell'+(c.off?' off':'')+(c.today?' today':'')+(c.w===1&&c.d>1?' w-mon':'')+'"></td>';return h+'<td class="stat">'+(extra||'')+'</td>';}
 function draftRow(g,info,withCat,rows,last,d){
   let h='<tr class="draft'+(last?' gend':'')+(d.err?' err':'')+'" data-cat="'+g.id+'" data-dkey="'+d.k+'">';
   if(withCat)h+=catCell(g,rows);
@@ -463,7 +470,7 @@ function render(){
   if(editing&&drafts.some(d=>d.type==='item'&&d.cat===NONE)&&!gs.some(g=>g.id===NONE))gs.push({id:NONE,cat:null,items:[]});
   let html='<table'+(editing?' class="editing"':'')+'><thead>'+eventRows(y,m,days,info)+'<tr><th class="catcol">分類</th><th class="namecol">項目</th>';
   for(const c of info){
-    const cls=['dayh',c.off?'off':'',c.w===6?'sat':'',c.w===0?'sun':'',c.h?'hol':'',c.today?'today':''].join(' ');
+    const cls=['dayh',c.off?'off':'',c.w===6?'sat':'',c.w===0?'sun':'',c.h?'hol':'',c.today?'today':'',c.w===1&&c.d>1?'w-mon':''].join(' ');
     html+='<th class="'+cls+'"'+(c.h?' title="'+esc(c.h)+'"':'')+'><span class="n">'+c.d+'</span><span class="w">'+(c.h?'祝':WD[c.w])+'</span></th>';
   }
   html+='<th class="stat">達成</th></tr></thead><tbody>';
@@ -505,7 +512,7 @@ function render(){
       html+='</th>';
       for(const c of info){
         const on=!!ck[c.d];if(on)cnt++;
-        html+='<td class="cell'+(c.off?' off':'')+(c.today?' today':'')+'"><button class="chk'+(c.future?' future':'')+'" data-item="'+it.id+'" data-day="'+c.d+'" aria-pressed="'+on+'" aria-label="'+esc(it.name)+' '+m+'月'+c.d+'日">'+CHECK+'</button></td>';
+        html+='<td class="cell'+(c.off?' off':'')+(c.today?' today':'')+(c.w===1&&c.d>1?' w-mon':'')+'"><button class="chk'+(c.future?' future':'')+'" data-item="'+it.id+'" data-day="'+c.d+'" aria-pressed="'+on+'" aria-label="'+esc(it.name)+' '+m+'月'+c.d+'日">'+CHECK+'</button></td>';
       }
       html+='<td class="stat"><b>'+cnt+'</b>/'+(elapsed||days)+'</td></tr>';
       emitDrafts(it.id);
@@ -525,7 +532,7 @@ function render(){
     for(const c of info){
       const k=items.filter(it=>(checks[it.id]||{})[c.d]).length;
       const cls=k===0?'':(k===items.length?'full':'part');
-      html+='<td class="'+(c.off?'off':'')+'" title="'+k+'/'+items.length+'"><span class="dot '+cls+'"></span></td>';
+      html+='<td class="'+(c.off?'off':'')+(c.w===1&&c.d>1?' w-mon':'')+'" title="'+k+'/'+items.length+'"><span class="dot '+cls+'"></span></td>';
     }
     html+='<td class="stat"></td></tr></tfoot>';
   }
@@ -712,8 +719,7 @@ function commitDraft(k){
   list.forEach((x,i)=>{const o=i+1;if(x.order!==o||x===it){x.order=o;saveDoc('items',x);}});
   // 同じ位置で後から開いた入力欄は、新しい項目の下へ
   drafts.forEach((x,i)=>{if(i>di&&x.type==='item'&&x.cat===d.cat&&x.after===d.after)x.after=it.id;});
-  const nd={k:newId('d'),type:'item',cat:d.cat,after:it.id,name:'',url:'',err:false}; // 続けて下に入力
-  drafts.splice(di,1,nd);focusId='dn-'+nd.k;
+  drafts.splice(di,1);
   render();
 }
 function cancelDraft(k){syncDrafts();drafts=drafts.filter(x=>x.k!==k);render();}
