@@ -205,6 +205,40 @@ tr.draft.err input.dname{border-color:var(--danger);box-shadow:0 0 0 2px color-m
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 tr.shake .dname{animation:shake .25s}
 @media (prefers-reduced-motion:reduce){tr.shake .dname{animation:none}}
+/* セール期間 */
+:root{--ev-ss:#C8323A;--ev-marathon:#D9831F;--ev-other:#6B6FD6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ev-ss:#E0565D;--ev-marathon:#E9A04A;--ev-other:#8E92EC}}
+:root[data-theme="dark"]{--ev-ss:#E0565D;--ev-marathon:#E9A04A;--ev-other:#8E92EC}
+thead tr.evrow th{position:static;background:var(--surface);border-bottom:none;padding:5px 1px 3px;height:30px}
+thead tr.evrow th.catcol,thead tr.evrow th.namecol{position:sticky;left:0;z-index:4}
+thead tr.evrow th.namecol{left:var(--catw);font-size:11px;color:var(--muted);font-weight:500;vertical-align:middle}
+thead tr.evrow th.evoff{background:color-mix(in srgb,var(--off) 55%,var(--surface))}
+.evbar{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;height:22px;border-radius:5px;border:none;padding:0 6px;
+  background:var(--evc);color:#fff;font:inherit;font-size:12px;font-weight:700;letter-spacing:.04em;white-space:nowrap;overflow:hidden;cursor:default}
+.evbar small{font-weight:500;font-size:10px;opacity:.85;letter-spacing:0;font-family:var(--mono)}
+table.editing .evbar{cursor:pointer}
+table.editing .evbar:hover{filter:brightness(1.08);box-shadow:0 0 0 2px color-mix(in srgb,var(--evc) 35%,transparent)}
+.evadd{font-size:11px;padding:3px 8px}
+.evback{position:fixed;inset:0;background:rgba(10,14,20,.35);z-index:60}
+.evpanel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:61;width:min(360px,calc(100vw - 32px));background:var(--surface);color:var(--ink);
+  border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.25);padding:18px;display:flex;flex-direction:column;gap:12px}
+.evpanel h3{margin:0;font-size:15px}
+.evtypes{display:flex;gap:6px}
+.evtypes label{flex:1}
+.evtypes input{position:absolute;opacity:0;pointer-events:none}
+.evtypes span{display:block;text-align:center;padding:7px 0;border-radius:8px;border:1.5px solid var(--line);font-weight:700;font-size:13px;cursor:pointer}
+.evtypes input:checked+span{color:#fff;border-color:transparent}
+.evtypes input:checked+.t-ss{background:var(--ev-ss)}
+.evtypes input:checked+.t-marathon{background:var(--ev-marathon)}
+.evtypes input:checked+.t-other{background:var(--ev-other)}
+.evtypes input:focus-visible+span{outline:2px solid var(--focus);outline-offset:2px}
+.evdt{display:grid;grid-template-columns:3em 1fr;align-items:center;gap:8px}
+.evdt label{font-size:12px;color:var(--muted)}
+.evdt input,#evLabel{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px;min-width:0}
+.everr{margin:0;font-size:12px;color:var(--danger);font-weight:700}
+.evbtns{display:flex;gap:8px;align-items:center}
+.evbtns span{flex:1}
+.evbtns .del{color:var(--danger)}
 </style>
 
 </head>
@@ -240,6 +274,25 @@ tr.shake .dname{animation:shake .25s}
 </div>
 <div id="dropline" hidden></div>
 <div id="ghost" hidden></div>
+<div id="evBack" class="evback" hidden></div>
+<form id="evPanel" class="evpanel" hidden autocomplete="off" aria-labelledby="evTitle">
+  <h3 id="evTitle">セール期間</h3>
+  <div class="evtypes" role="radiogroup" aria-label="種類">
+    <label><input type="radio" name="evType" value="ss" checked><span class="t-ss">SS</span></label>
+    <label><input type="radio" name="evType" value="marathon"><span class="t-marathon">マラソン</span></label>
+    <label><input type="radio" name="evType" value="other"><span class="t-other">その他</span></label>
+  </div>
+  <input type="text" id="evLabel" placeholder="表示名（例: 5と0のつく日）" maxlength="16" aria-label="表示名" hidden>
+  <div class="evdt"><label for="evStart">開始</label><input type="datetime-local" id="evStart" required></div>
+  <div class="evdt"><label for="evEnd">終了</label><input type="datetime-local" id="evEnd" required></div>
+  <p class="everr" id="evErr" hidden></p>
+  <div class="evbtns">
+    <button type="button" class="btn del" id="evDel" hidden>削除</button>
+    <span></span>
+    <button type="button" class="btn" id="evCancel">やめる</button>
+    <button type="submit" class="btn primary">保存</button>
+  </div>
+</form>
 
 <script>
 (function(){
@@ -282,6 +335,7 @@ const WD='日月火水木金土';
 const now=new Date();
 let view={y:now.getFullYear(),m:now.getMonth()+1};
 let items=[];            // [{id,name,url,cat,order}]
+let events=[];           // セール期間 [{id,type:'ss'|'marathon'|'other',label,start:'YYYY-MM-DDTHH:MM',end}]
 let cats=[];             // [{id,name,order}]
 let checks={};           // {itemId:{"1":true}}
 let editing=false;
@@ -301,7 +355,7 @@ function nextHue(){const used=cats.map(c=>c.hue);for(let i=0;i<HUES.length;i++)i
 
 /* ---------- 保存層（db / 端末内フォールバック） ---------- */
 const LS='routinecheck-v1';
-function lsRead(){try{const s=JSON.parse(localStorage.getItem(LS))||{};return {items:s.items||[],cats:s.cats||[],months:s.months||{}};}catch(e){return {items:[],cats:[],months:{}};}}
+function lsRead(){try{const s=JSON.parse(localStorage.getItem(LS))||{};return {items:s.items||[],cats:s.cats||[],events:s.events||[],months:s.months||{}};}catch(e){return {items:[],cats:[],events:[],months:{}};}}
 function lsWrite(s){try{localStorage.setItem(LS,JSON.stringify(s));}catch(e){}}
 
 let writing=false, dirty=false;
@@ -313,7 +367,7 @@ async function saveMonth(){
   catch(e){status(e.code==='invalid_argument'?'このページは閲覧のみです':'保存できませんでした。もう一度お試しください');}
   writing=false;if(dirty){dirty=false;saveMonth();}
 }
-function bodyOf(coll,o){return coll==='items'?{name:o.name,url:o.url||'',cat:o.cat||'',order:o.order}:{name:o.name,order:o.order,hue:Number.isInteger(o.hue)?o.hue:null};}
+function bodyOf(coll,o){if(coll==='events')return {type:o.type,label:o.label||'',start:o.start,end:o.end};return coll==='items'?{name:o.name,url:o.url||'',cat:o.cat||'',order:o.order}:{name:o.name,order:o.order,hue:Number.isInteger(o.hue)?o.hue:null};}
 async function saveDoc(coll,o){
   if(local){const s=lsRead();const a=s[coll];const i=a.findIndex(x=>x.id===o.id);const v={id:o.id,...bodyOf(coll,o)};if(i>=0)a[i]=v;else a.push(v);lsWrite(s);return;}
   try{await db.doc(coll+'/'+o.id).set(bodyOf(coll,o));status('保存しました');}
@@ -407,7 +461,7 @@ function render(){
   $('holList').textContent=hols.length?'今月の祝日: '+hols.join('　'):'';
   const gs=groups();
   if(editing&&drafts.some(d=>d.type==='item'&&d.cat===NONE)&&!gs.some(g=>g.id===NONE))gs.push({id:NONE,cat:null,items:[]});
-  let html='<table'+(editing?' class="editing"':'')+'><thead><tr><th class="catcol">分類</th><th class="namecol">項目</th>';
+  let html='<table'+(editing?' class="editing"':'')+'><thead>'+eventRows(y,m,days,info)+'<tr><th class="catcol">分類</th><th class="namecol">項目</th>';
   for(const c of info){
     const cls=['dayh',c.off?'off':'',c.w===6?'sat':'',c.w===0?'sun':'',c.h?'hol':'',c.today?'today':''].join(' ');
     html+='<th class="'+cls+'"'+(c.h?' title="'+esc(c.h)+'"':'')+'><span class="n">'+c.d+'</span><span class="w">'+(c.h?'祝':WD[c.w])+'</span></th>';
@@ -728,10 +782,85 @@ $('prev').onclick=()=>shift(-1);
 $('next').onclick=()=>shift(1);
 $('todayBtn').onclick=()=>{const t=new Date();view={y:t.getFullYear(),m:t.getMonth()+1};loadMonth();scrollToToday();};
 
+
+/* ---------- セール期間 ---------- */
+const EV_NAME={ss:'SS',marathon:'マラソン'};
+const evName=e=>e.type==='other'?(e.label||'イベント'):EV_NAME[e.type]||'イベント';
+const evColor=e=>'var(--ev-'+(EV_NAME[e.type]?e.type:'other')+')';
+function fmtDT(v){const d=+v.slice(8,10),mo=+v.slice(5,7),hh=+v.slice(11,13),mm=v.slice(14,16);return mo+'/'+d+' '+hh+':'+mm;}
+function eventRows(y,m,days,info){
+  const ms=y+'-'+pad(m)+'-01T00:00', me=y+'-'+pad(m)+'-'+pad(days)+'T23:59';
+  const list=events.filter(e=>e.start<=me&&e.end>=ms).map(e=>({e,sd:e.start<ms?1:+e.start.slice(8,10),ed:e.end>me?days:+e.end.slice(8,10)}))
+    .filter(x=>x.ed>=x.sd).sort((a,b)=>a.sd-b.sd||b.ed-a.ed);
+  if(!list.length&&!editing)return '';
+  const lanes=[];
+  for(const x of list){let l=lanes.findIndex(L=>L[L.length-1].ed<x.sd);if(l<0){lanes.push([]);l=lanes.length-1;}lanes[l].push(x);}
+  if(!lanes.length)lanes.push([]);
+  let h='';
+  lanes.forEach((L,li)=>{
+    h+='<tr class="evrow"><th class="catcol"></th><th class="namecol">'+(li===0?(editing?'<button class="addlink evadd" data-evact="new">'+PLUS+'セール期間</button>':'セール'):'')+'</th>';
+    let d=1;
+    for(const x of L){
+      for(;d<x.sd;d++)h+='<th class="'+(info[d-1].off?'evoff':'')+'"></th>';
+      const span=x.ed-x.sd+1, name=evName(x.e), tip=name+'  '+fmtDT(x.e.start)+' 〜 '+fmtDT(x.e.end);
+      h+='<th colspan="'+span+'"><button type="button" class="evbar" style="--evc:'+evColor(x.e)+'" data-evid="'+x.e.id+'" title="'+esc(tip)+'" aria-label="'+esc(tip)+'">'+esc(name)+
+        (span>=5?'<small>'+esc(fmtDT(x.e.start))+'〜'+esc(fmtDT(x.e.end))+'</small>':'')+'</button></th>';
+      d=x.ed+1;
+    }
+    for(;d<=days;d++)h+='<th class="'+(info[d-1].off?'evoff':'')+'"></th>';
+    h+='<th class="stat"></th></tr>';
+  });
+  return h;
+}
+let evEditing=null;
+function evType(){return document.querySelector('input[name="evType"]:checked').value;}
+function openEvent(ev){
+  evEditing=ev||null;
+  const {y,m}=view;
+  const t=ev?ev.type:'ss';
+  document.querySelectorAll('input[name="evType"]').forEach(r=>{r.checked=r.value===t;});
+  $('evLabel').value=ev?ev.label:'';$('evLabel').hidden=t!=='other';
+  $('evStart').value=ev?ev.start:y+'-'+pad(m)+'-04T20:00';
+  $('evEnd').value=ev?ev.end:y+'-'+pad(m)+'-11T01:59';
+  $('evTitle').textContent=ev?'セール期間を変更':'セール期間を追加';
+  $('evDel').hidden=!ev;delete $('evDel').dataset.confirm;$('evDel').textContent='削除';
+  $('evErr').hidden=true;
+  $('evBack').hidden=false;$('evPanel').hidden=false;
+  document.querySelector('input[name="evType"]:checked').focus();
+}
+function closeEvent(){$('evBack').hidden=true;$('evPanel').hidden=true;evEditing=null;render();}
+document.querySelectorAll('input[name="evType"]').forEach(r=>r.addEventListener('change',()=>{$('evLabel').hidden=evType()!=='other';if(evType()==='other')$('evLabel').focus();}));
+$('evPanel').addEventListener('submit',e=>{
+  e.preventDefault();
+  const type=evType(), label=$('evLabel').value.trim(), start=$('evStart').value, end=$('evEnd').value;
+  const err=msg=>{$('evErr').textContent=msg;$('evErr').hidden=false;};
+  if(!start||!end)return err('開始と終了の日時を入れてください');
+  if(end<=start)return err('終了は開始より後にしてください');
+  if(type==='other'&&!label)return err('表示名を入れてください');
+  const ev=evEditing||{id:newId('e')};
+  Object.assign(ev,{type,label:type==='other'?label:'',start,end});
+  if(!evEditing)events.push(ev);
+  saveDoc('events',ev);closeEvent();
+});
+$('evCancel').addEventListener('click',closeEvent);
+$('evBack').addEventListener('click',closeEvent);
+$('evPanel').addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();closeEvent();}});
+$('evDel').addEventListener('click',()=>{
+  const b=$('evDel');
+  if(!b.dataset.confirm){b.dataset.confirm='1';b.textContent='本当に削除';return;}
+  if(evEditing){events=events.filter(x=>x!==evEditing);removeDoc('events',evEditing.id);}
+  closeEvent();
+});
+$('box').addEventListener('click',e=>{
+  const a=e.target.closest('[data-evact="new"]');if(a){openEvent(null);return;}
+  const b=e.target.closest('.evbar');if(!b||!editing)return;
+  const ev=events.find(x=>x.id===b.dataset.evid);if(ev)openEvent(ev);
+});
+
 /* ---------- 起動 ---------- */
 render();scrollToToday();
 function startLocal(){
-  local=true;const s=lsRead();items=s.items;cats=s.cats;status('この端末のブラウザに保存しています');loadMonth();scrollToToday();
+  local=true;const s=lsRead();items=s.items;cats=s.cats;events=s.events;status('この端末のブラウザに保存しています');loadMonth();scrollToToday();
 }
 (async()=>{
   let ns=null;
@@ -742,6 +871,10 @@ function startLocal(){
   db.collection('items').onSnapshot(s=>{
     items=s.docs.map(d=>{const x=d.data();return {id:d.id,name:String(x.name||''),url:String(x.url||''),cat:String(x.cat||''),order:Number(x.order)||0};});
     safeRender();if(first){first=false;scrollToToday();}
+  },e=>status('同期が止まりました。再読み込みしてください'));
+  db.collection('events').onSnapshot(s=>{
+    events=s.docs.map(d=>{const x=d.data();return {id:d.id,type:String(x.type||'other'),label:String(x.label||''),start:String(x.start||''),end:String(x.end||'')};}).filter(e=>e.start&&e.end);
+    if(!$('evPanel').hidden)return; safeRender();
   },e=>status('同期が止まりました。再読み込みしてください'));
   db.collection('cats').onSnapshot(s=>{
     cats=s.docs.map(d=>{const x=d.data();return {id:d.id,name:String(x.name||''),order:Number(x.order)||0,hue:Number.isInteger(x.hue)?x.hue:null};});
