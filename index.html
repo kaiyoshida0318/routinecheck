@@ -200,6 +200,11 @@ tr.addrow>*{border-bottom:none}
 .insb.cat{color:var(--today);border-color:var(--today)}
 .insb.cat.on:hover,.insb.cat:focus-visible{background:var(--today);color:#fff}
 body.dragging #ins{display:none}
+tr.draft.err input.dname{border-color:var(--danger);box-shadow:0 0 0 2px color-mix(in srgb,var(--danger) 25%,transparent)}
+.errmsg{color:var(--danger);font-weight:700}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+tr.shake .dname{animation:shake .25s}
+@media (prefers-reduced-motion:reduce){tr.shake .dname{animation:none}}
 </style>
 
 </head>
@@ -281,7 +286,9 @@ let cats=[];             // [{id,name,order}]
 let checks={};           // {itemId:{"1":true}}
 let editing=false;
 let db=null, unsubMonth=null, local=false;
-let drag=null, renderPending=false, draft=null;
+let drag=null, renderPending=false, drafts=[], focusId=null;
+function syncDrafts(){for(const d of drafts){const n=$('dn-'+d.k),u=$('du-'+d.k),c=$('dc-'+d.k);if(n)d.name=n.value;if(u)d.url=u.value;if(c)d.name=c.value;}}
+function addDraft(o){syncDrafts();const d={k:newId('d'),name:'',url:'',err:false,...o};drafts.push(d);focusId=(d.type==='cat'?'dc-':'dn-')+d.k;render();}
 const NONE='_none';
 const HUES=['#4A90E2','#2A9C78','#E0A33A','#C0463E','#8A63D2','#3AA7B8','#D46A9C','#7A8B3A'];
 const $=id=>document.getElementById(id);
@@ -375,16 +382,17 @@ function catCell(g,rows){
   return h+'</div></td>';
 }
 function blankCells(info,extra){let h='';for(const c of info)h+='<td class="cell'+(c.off?' off':'')+(c.today?' today':'')+'"></td>';return h+'<td class="stat">'+(extra||'')+'</td>';}
-function draftRow(g,info,withCat,rows,last){
-  let h='<tr class="draft'+(last?' gend':'')+'" data-cat="'+g.id+'">';
+function draftRow(g,info,withCat,rows,last,d){
+  let h='<tr class="draft'+(last?' gend':'')+(d.err?' err':'')+'" data-cat="'+g.id+'" data-dkey="'+d.k+'">';
   if(withCat)h+=catCell(g,rows);
-  h+='<th class="namecol" scope="row"><div class="edit"><div class="erow"><input type="text" id="dn" class="din" placeholder="新しい項目名" maxlength="60" aria-label="新しい項目名"></div>'+
-     '<input type="url" id="du" class="din" placeholder="リンク（任意）" aria-label="リンク"><div class="erow hint"><button class="btn mini primary" data-act="dsave">追加</button><button class="btn mini" data-act="dcancel">やめる</button><span>Enterで追加 / Escでやめる</span></div></div></th>';
+  h+='<th class="namecol" scope="row"><div class="edit"><div class="erow"><input type="text" id="dn-'+d.k+'" data-key="'+d.k+'" class="din dname" value="'+esc(d.name)+'" placeholder="新しい項目名" maxlength="60" aria-label="新しい項目名"></div>'+
+     '<input type="url" id="du-'+d.k+'" data-key="'+d.k+'" class="din" value="'+esc(d.url)+'" placeholder="リンク（任意）" aria-label="リンク"><div class="erow hint"><button class="btn mini primary" data-act="dsave" data-key="'+d.k+'">追加</button><button class="btn mini" data-act="dcancel" data-key="'+d.k+'">やめる</button><span>'+(d.err?'<b class="errmsg">項目名を入力してください</b>':'Enterで追加 / Escでやめる')+'</span></div></div></th>';
   return h+blankCells(info)+'</tr>';
 }
 
 function render(){
   renderPending=false;
+  syncDrafts();
   const {y,m}=view, days=new Date(y,m,0).getDate();
   $('title').innerHTML='<span class="y">'+y+'</span>'+m+'月';
   const t=new Date(), isThis=t.getFullYear()===y&&t.getMonth()+1===m, today=t.getDate();
@@ -398,28 +406,34 @@ function render(){
   }
   $('holList').textContent=hols.length?'今月の祝日: '+hols.join('　'):'';
   const gs=groups();
-  if(draft&&draft.type==='item'&&draft.cat===NONE&&!gs.some(g=>g.id===NONE))gs.push({id:NONE,cat:null,items:[]});
+  if(editing&&drafts.some(d=>d.type==='item'&&d.cat===NONE)&&!gs.some(g=>g.id===NONE))gs.push({id:NONE,cat:null,items:[]});
   let html='<table'+(editing?' class="editing"':'')+'><thead><tr><th class="catcol">分類</th><th class="namecol">項目</th>';
   for(const c of info){
     const cls=['dayh',c.off?'off':'',c.w===6?'sat':'',c.w===0?'sun':'',c.h?'hol':'',c.today?'today':''].join(' ');
     html+='<th class="'+cls+'"'+(c.h?' title="'+esc(c.h)+'"':'')+'><span class="n">'+c.d+'</span><span class="w">'+(c.h?'祝':WD[c.w])+'</span></th>';
   }
   html+='<th class="stat">達成</th></tr></thead><tbody>';
-  const catDraft=editing&&draft&&draft.type==='cat';
-  const catDraftHtml=()=>'<tr class="draft catdraft gend" data-cat="_new"><td class="catcol" style="--hue:'+HUES[nextHue()]+'"><div class="cathead"><span class="cdot"></span><input type="text" id="dc" class="din cin" placeholder="新しい分類名" maxlength="20" aria-label="新しい分類名"></div></td>'+
-    '<th class="namecol" scope="row"><div class="erow hint"><button class="btn mini primary" data-act="dsave">分類を作る</button><button class="btn mini" data-act="dcancel">やめる</button><span>Enterで作成 / Escでやめる</span></div></th>'+blankCells(info)+'</tr>';
-  let catDraftDone=false;
+  const catIds=new Set(cats.map(c=>c.id));
+  const cds=editing?drafts.filter(d=>d.type==='cat'):[];
+  const catDraft=cds.length>0;
+  const cAnchor=d=>d.before&&catIds.has(d.before)?d.before:null;
+  const catDraftHtml=d=>'<tr class="draft catdraft gend'+(d.err?' err':'')+'" data-cat="_new" data-dkey="'+d.k+'"><td class="catcol" style="--hue:'+HUES[nextHue()]+'"><div class="cathead"><span class="cdot"></span><input type="text" id="dc-'+d.k+'" data-key="'+d.k+'" class="din dname cin" value="'+esc(d.name)+'" placeholder="新しい分類名" maxlength="20" aria-label="新しい分類名"></div></td>'+
+    '<th class="namecol" scope="row"><div class="erow hint"><button class="btn mini primary" data-act="dsave" data-key="'+d.k+'">分類を作る</button><button class="btn mini" data-act="dcancel" data-key="'+d.k+'">やめる</button><span>'+(d.err?'<b class="errmsg">'+esc(d.errMsg||'分類名を入力してください')+'</b>':'Enterで作成 / Escでやめる')+'</span></div></th>'+blankCells(info)+'</tr>';
+  let endCatDone=false;
   for(const g of gs){
-    if(catDraft&&!catDraftDone&&(draft.before===g.id||(draft.before===null&&g.id===NONE))){html+=catDraftHtml();catDraftDone=true;}
-    const hasDraft=editing&&draft&&draft.type==='item'&&draft.cat===g.id;
-    const rows=g.items.length+(hasDraft?1:0);
+    if(g.cat)cds.filter(d=>cAnchor(d)===g.id).forEach(d=>{html+=catDraftHtml(d);});
+    if(g.id===NONE&&!endCatDone){cds.filter(d=>cAnchor(d)===null).forEach(d=>{html+=catDraftHtml(d);});endCatDone=true;}
+    const ids=new Set(g.items.map(x=>x.id));
+    const ds=editing?drafts.filter(d=>d.type==='item'&&d.cat===g.id):[];
+    const anchorOf=d=>d.after==='_top'||ids.has(d.after)?d.after:null;
+    const rows=g.items.length+ds.length;
     if(!rows){
       html+='<tr class="emptyrow gend" data-cat="'+g.id+'">'+catCell(g,1)+'<th class="namecol" scope="row">'+(editing?'<button class="addlink" data-act="add" data-id="'+g.id+'">'+PLUS+'項目を追加</button>':'ここへ項目をドラッグ')+'</th>'+blankCells(info)+'</tr>';
       continue;
     }
     let first=true, n=0;
-    const emitDraft=()=>{n++;html+=draftRow(g,info,first,rows,n===rows);first=false;};
-    if(hasDraft&&draft.after==='_top')emitDraft();
+    const emitDrafts=a=>ds.filter(d=>anchorOf(d)===a).forEach(d=>{n++;html+=draftRow(g,info,first,rows,n===rows,d);first=false;});
+    emitDrafts('_top');
     g.items.forEach(it=>{
       n++;
       const ck=checks[it.id]||{};let cnt=0;
@@ -440,11 +454,11 @@ function render(){
         html+='<td class="cell'+(c.off?' off':'')+(c.today?' today':'')+'"><button class="chk'+(c.future?' future':'')+'" data-item="'+it.id+'" data-day="'+c.d+'" aria-pressed="'+on+'" aria-label="'+esc(it.name)+' '+m+'月'+c.d+'日">'+CHECK+'</button></td>';
       }
       html+='<td class="stat"><b>'+cnt+'</b>/'+(elapsed||days)+'</td></tr>';
-      if(hasDraft&&draft.after===it.id)emitDraft();
+      emitDrafts(it.id);
     });
-    if(hasDraft&&draft.after===null)emitDraft();
+    emitDrafts(null);
   }
-  if(catDraft&&!catDraftDone)html+=catDraftHtml();
+  if(!endCatDone)cds.filter(d=>cAnchor(d)===null).forEach(d=>{html+=catDraftHtml(d);});
   if(editing&&!catDraft&&(!cats.length||!gs.some(g=>g.id===NONE))){
     {
       html+='<tr class="addrow"><td class="addcell" colspan="2">'+(cats.length?'':'<button class="addlink" data-act="newcat">'+PLUS+'分類を追加</button>')+
@@ -464,10 +478,13 @@ function render(){
   html+='</table>';
   if(!gs.length&&!editing)html+='<div class="empty">まだ項目がありません。<button class="addlink" data-act="startedit">'+PLUS+'項目を追加する</button></div>';
   const box=$('box'), sl=box.scrollLeft;
+  const ae=document.activeElement, prevFocus=ae&&ae.id&&box.contains(ae)?ae.id:null;
+  const selPos=prevFocus&&typeof ae.selectionStart==='number'?ae.selectionStart:null;
   box.innerHTML=html;
   box.scrollLeft=sl;
   placeInserts();
-  const d=$('dn')||$('dc');if(d)d.focus({preventScroll:false});
+  const f=(focusId&&$(focusId))||(prevFocus&&$(prevFocus));focusId=null;
+  if(f){f.focus({preventScroll:false});if(selPos!==null&&f.id===prevFocus)try{f.setSelectionRange(selPos,selPos);}catch(e){}}
 }
 
 /* 行・分類の境目に出す「＋」（マウスを乗せた行の上下に表示） */
@@ -484,7 +501,7 @@ function placeInserts(){
   let prev=null;
   rows.forEach(tr=>{
     const cid=tr.dataset.cat, id=tr.dataset.item;
-    if(!cid||cid==='_new'||!id){prev=null;return;}
+    if(!cid||cid==='_new'||!id){if(!tr.classList.contains('draft'))prev=null;return;}
     const top=tr.offsetTop, bottom=top+tr.offsetHeight;
     const above=prev&&prev.cat===cid?prev.id:'_top';
     btn(catW+22,top,'r:'+id,' data-ins="item" data-cat="'+cid+'" data-after="'+above+'"','上に項目を追加');
@@ -612,34 +629,40 @@ window.addEventListener('pointercancel',()=>endDrag(false));
 window.addEventListener('keydown',e=>{if(e.key==='Escape')endDrag(false);});
 
 /* ---------- 操作 ---------- */
-function commitDraft(){
-  if(!draft)return;
-  if(draft.type==='cat'){
-    const name=($('dc').value||'').trim();
-    if(!name){draft=null;render();return;}
-    if(cats.some(c=>c.name===name)){status('同じ名前の分類がすでにあります');$('dc').focus();return;}
+function commitDraft(k){
+  syncDrafts();
+  const di=drafts.findIndex(x=>x.k===k);if(di<0)return;
+  const d=drafts[di], name=(d.name||'').trim();
+  const fail=msg=>{d.err=true;d.errMsg=msg;focusId=(d.type==='cat'?'dc-':'dn-')+d.k;render();
+    const el=$(focusId);if(el){const tr=el.closest('tr');tr.classList.remove('shake');void tr.offsetWidth;tr.classList.add('shake');}};
+  if(d.type==='cat'){
+    if(!name)return fail('分類名を入力してください');
+    if(cats.some(c=>c.name===name))return fail('同じ名前の分類がすでにあります');
     const id=resolveCat(name);
     const c=cats.find(x=>x.id===id), list=sortedCats().filter(x=>x!==c);
-    let idx=list.length;if(draft.before){const i=list.findIndex(x=>x.id===draft.before);if(i>=0)idx=i;}
+    let idx=list.length;if(d.before){const i=list.findIndex(x=>x.id===d.before);if(i>=0)idx=i;}
     list.splice(idx,0,c);list.forEach((x,i)=>{const o=i+1;if(x.order!==o){x.order=o;saveDoc('cats',x);}});
-    draft={type:'item',cat:id,after:null};   // 続けて中の項目を入力
+    const nd={k:newId('d'),type:'item',cat:id,after:null,name:'',url:'',err:false};   // 続けて中の項目を入力
+    drafts.splice(di,1,nd);focusId='dn-'+nd.k;
     status('分類「'+name+'」を作りました');render();return;
   }
-  const name=($('dn').value||'').trim();
-  if(!name){draft=null;render();return;}
-  const url=($('du').value||'').trim();
-  const cat=draft.cat===NONE?'':draft.cat;
+  if(!name)return fail('項目名を入力してください');
+  const url=(d.url||'').trim();
+  const cat=d.cat===NONE?'':d.cat;
   const it={id:newId('i'),name,url,cat,order:0};
-  const list=itemsIn(draft.cat);
+  const list=itemsIn(d.cat);
   let idx=list.length;
-  if(draft.after==='_top')idx=0;
-  else if(draft.after){const i=list.findIndex(x=>x.id===draft.after);if(i>=0)idx=i+1;}
+  if(d.after==='_top')idx=0;
+  else if(d.after){const i=list.findIndex(x=>x.id===d.after);if(i>=0)idx=i+1;}
   list.splice(idx,0,it);items.push(it);
   list.forEach((x,i)=>{const o=i+1;if(x.order!==o||x===it){x.order=o;saveDoc('items',x);}});
-  draft={type:'item',cat:draft.cat,after:it.id}; // 続けて下に入力
+  // 同じ位置で後から開いた入力欄は、新しい項目の下へ
+  drafts.forEach((x,i)=>{if(i>di&&x.type==='item'&&x.cat===d.cat&&x.after===d.after)x.after=it.id;});
+  const nd={k:newId('d'),type:'item',cat:d.cat,after:it.id,name:'',url:'',err:false}; // 続けて下に入力
+  drafts.splice(di,1,nd);focusId='dn-'+nd.k;
   render();
 }
-function cancelDraft(){draft=null;render();}
+function cancelDraft(k){syncDrafts();drafts=drafts.filter(x=>x.k!==k);render();}
 
 $('box').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
@@ -650,10 +673,10 @@ $('box').addEventListener('click',e=>{
     render();saveMonth();return;
   }
   const id=b.dataset.id, act=b.dataset.act;if(!act)return;
-  if(act==='add'){draft={type:'item',cat:id,after:b.dataset.after||null};render();}
-  else if(act==='newcat'){draft={type:'cat',before:null};render();}
-  else if(act==='dsave'){commitDraft();}
-  else if(act==='dcancel'){cancelDraft();}
+  if(act==='add'){addDraft({type:'item',cat:id,after:b.dataset.after||null});}
+  else if(act==='newcat'){addDraft({type:'cat',before:null});}
+  else if(act==='dsave'){commitDraft(b.dataset.key);}
+  else if(act==='dcancel'){cancelDraft(b.dataset.key);}
   else if(act==='startedit'){setEditing(true);}
   else if(act==='del'){
     if(b.dataset.confirm){items=items.filter(x=>x.id!==id);removeDoc('items',id);render();}
@@ -676,15 +699,19 @@ $('box').addEventListener('change',e=>{
     if(!v||cats.some(x=>x!==c&&x.name===v)){if(v)status('同じ名前の分類がすでにあります');el.value=c.name;return;}
     c.name=v;saveDoc('cats',c);}
 });
+$('box').addEventListener('input',e=>{
+  const el=e.target;if(!el.classList||!el.classList.contains('dname'))return;
+  const d=drafts.find(x=>x.k===el.dataset.key);if(d&&d.err&&el.value.trim()){d.err=false;const tr=el.closest('tr');tr.classList.remove('err');const m=tr.querySelector('.errmsg');if(m)m.parentNode.textContent=d.type==='cat'?'Enterで作成 / Escでやめる':'Enterで追加 / Escでやめる';}
+});
 $('box').addEventListener('keydown',e=>{
   const el=e.target;if(el.tagName!=='INPUT'||e.isComposing)return;
   if(el.classList.contains('din')){
-    if(e.key==='Enter'){e.preventDefault();commitDraft();}
-    else if(e.key==='Escape'){e.preventDefault();cancelDraft();}
+    if(e.key==='Enter'){e.preventDefault();commitDraft(el.dataset.key);}
+    else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();cancelDraft(el.dataset.key);}
   }else if(e.key==='Enter'){el.blur();}
 });
 function setEditing(on){
-  editing=on;draft=null;if(!on)$('ins').innerHTML='';
+  editing=on;drafts=[];if(!on)$('ins').innerHTML='';
   const b=$('editToggle');b.setAttribute('aria-pressed',on);b.classList.toggle('on',on);
   b.innerHTML=on?'完了':'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M10.5 2.5l3 3L6 13H3v-3z"/></svg>編集';
   render();
@@ -692,9 +719,8 @@ function setEditing(on){
 $('editToggle').addEventListener('click',()=>setEditing(!editing));
 $('ins').addEventListener('click',e=>{
   const b=e.target.closest('.insb');if(!b)return;
-  if(b.dataset.ins==='item')draft={type:'item',cat:b.dataset.cat,after:b.dataset.after};
-  else draft={type:'cat',before:b.dataset.before||null};
-  render();
+  if(b.dataset.ins==='item')addDraft({type:'item',cat:b.dataset.cat,after:b.dataset.after});
+  else addDraft({type:'cat',before:b.dataset.before||null});
 });
 $('box').addEventListener('focusout',()=>{if(renderPending)setTimeout(()=>{if(renderPending)safeRender();},0);});
 function shift(n){view.m+=n;if(view.m<1){view.m=12;view.y--;}if(view.m>12){view.m=1;view.y++;}loadMonth();scrollToToday();}
