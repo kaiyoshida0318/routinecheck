@@ -279,6 +279,22 @@ thead tr.evrow th.namecol{padding:3px 12px}
 .chkline{display:flex;align-items:center;gap:8px;font-size:13px}
 .rprev{margin:0;padding:8px 10px;border-radius:8px;background:var(--off);font-size:12px;line-height:1.6;color:var(--ink)}
 #rSave:disabled{opacity:.4;cursor:not-allowed}
+/* 列幅と見やすさ調整 */
+.catcol{width:var(--catw)!important;min-width:var(--catw)!important;max-width:var(--catw)!important}
+.namecol{width:var(--namew)!important;min-width:var(--namew)!important;max-width:var(--namew)!important}
+tfoot .namecol,.addcell{width:auto!important;max-width:none!important;min-width:0!important}
+thead tr:not(.evrow) th.catcol,thead tr:not(.evrow) th.namecol{position:sticky}
+.colrz{position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:5;touch-action:none}
+.colrz::after{content:"";position:absolute;left:3px;top:20%;height:60%;width:2px;border-radius:1px;background:var(--line2);opacity:0;transition:opacity .12s}
+th:hover>.colrz::after,.colrz.on::after{opacity:1}
+.colrz.on::after{background:var(--today)}
+body.resizing,body.resizing *{cursor:col-resize!important;user-select:none!important}
+.chk{border:1.8px solid color-mix(in srgb,var(--muted) 60%,var(--surface))}
+.chk:hover{border-color:var(--accent);background:var(--accent-soft)}
+.cell.rest .chk{border-color:color-mix(in srgb,var(--muted) 45%,var(--surface))}
+.cell.miss .chk{border-color:color-mix(in srgb,var(--danger) 75%,var(--surface));background:color-mix(in srgb,var(--danger) 9%,transparent)}
+.rnote{margin:0;font-size:13px;color:var(--muted)}
+tbody tr[data-item]:hover>td.cell,tbody tr[data-item]:hover>.namecol{background-image:linear-gradient(var(--hl),var(--hl))}
 </style>
 
 </head>
@@ -318,7 +334,7 @@ thead tr.evrow th.namecol{padding:3px 12px}
 <form id="rulePanel" class="evpanel rpanel" hidden autocomplete="off" aria-labelledby="rTitle">
   <h3 id="rTitle">やる日</h3>
   <div class="rtypes" role="radiogroup" aria-label="決め方"><label class="tg"><input type="radio" name="rType" value="daily"><span>毎日</span></label><label class="tg"><input type="radio" name="rType" value="weekly"><span>曜日</span></label><label class="tg"><input type="radio" name="rType" value="nth"><span>第◯曜日</span></label><label class="tg"><input type="radio" name="rType" value="date"><span>日付</span></label><label class="tg"><input type="radio" name="rType" value="count"><span>回数</span></label></div>
-  <div data-sec="daily"><label class="chkline"><input type="checkbox" id="rSkip"> 土日祝は除く</label></div>
+  <div data-sec="daily"><p class="rnote">土日祝以外の毎日</p></div>
   <div data-sec="weekly" class="rsec">
     <div class="tgs"><label class="tg"><input type="checkbox" name="rWd" value="1"><span>月</span></label><label class="tg"><input type="checkbox" name="rWd" value="2"><span>火</span></label><label class="tg"><input type="checkbox" name="rWd" value="3"><span>水</span></label><label class="tg"><input type="checkbox" name="rWd" value="4"><span>木</span></label><label class="tg"><input type="checkbox" name="rWd" value="5"><span>金</span></label><label class="tg"><input type="checkbox" name="rWd" value="6"><span>土</span></label><label class="tg"><input type="checkbox" name="rWd" value="0"><span>日</span></label></div>
     <div class="tgs"><label class="tg"><input type="radio" name="rInt" value="1"><span>毎週</span></label><label class="tg"><input type="radio" name="rInt" value="2"><span>隔週</span></label></div>
@@ -499,7 +515,7 @@ function catCell(g,rows){
   }
   return h+'</div></td>';
 }
-function blankCells(info,extra){let h='';for(const c of info)h+='<td class="cell'+(c.off?' off':'')+(c.today?' today':'')+(c.w===1&&c.d>1?' w-mon':'')+'"></td>';return h+'<td class="stat">'+(extra||'')+'</td>';}
+function blankCells(info,extra){let h='';for(const c of info)h+='<td class="cell'+(c.off?' off':'')+(c.today?' today':'')+(c.w===1&&c.d>1?' w-mon':'')+'"></td>';return h;}
 function draftRow(g,info,withCat,rows,last,d){
   let h='<tr class="draft'+(last?' gend':'')+(d.err?' err':'')+'" data-cat="'+g.id+'" data-dkey="'+d.k+'">';
   if(withCat)h+=catCell(g,rows);
@@ -525,12 +541,12 @@ function render(){
   $('holList').textContent=hols.length?'今月の祝日: '+hols.join('　'):'';
   const gs=groups();
   if(editing&&drafts.some(d=>d.type==='item'&&d.cat===NONE)&&!gs.some(g=>g.id===NONE))gs.push({id:NONE,cat:null,items:[]});
-  let html='<table'+(editing?' class="editing"':'')+'><thead>'+eventRows(y,m,days,info)+'<tr><th class="catcol">分類</th><th class="namecol">項目</th>';
+  let html='<table'+(editing?' class="editing"':'')+' style="'+colVars()+'"><thead>'+eventRows(y,m,days,info)+'<tr><th class="catcol">分類<span class="colrz" data-col="cat" title="ドラッグで幅を変更"></span></th><th class="namecol">項目<span class="colrz" data-col="name" title="ドラッグで幅を変更"></span></th>';
   for(const c of info){
     const cls=['dayh',c.off?'off':'',c.w===6?'sat':'',c.w===0?'sun':'',c.h?'hol':'',c.today?'today':'',c.w===1&&c.d>1?'w-mon':''].join(' ');
     html+='<th class="'+cls+'"'+(c.h?' title="'+esc(c.h)+'"':'')+'><span class="n">'+c.d+'</span><span class="w">'+(c.h?'祝':WD[c.w])+'</span></th>';
   }
-  html+='<th class="stat">達成</th></tr></thead><tbody>';
+  html+='</tr></thead><tbody>';
   const catIds=new Set(cats.map(c=>c.id));
   const cds=editing?drafts.filter(d=>d.type==='cat'):[];
   const catDraft=cds.length>0;
@@ -571,9 +587,10 @@ function render(){
       const pl=planView(it,y,m,info,ck);
       for(const c of info){
         const on=!!ck[c.d], st=pl.state[c.d];
-        html+='<td class="cell'+(c.off?' off':'')+(c.today?' today':'')+(c.w===1&&c.d>1?' w-mon':'')+(st?' '+st:'')+'"><button class="chk'+(c.future?' future':'')+'" data-item="'+it.id+'" data-day="'+c.d+'" aria-pressed="'+on+'" aria-label="'+esc(it.name)+' '+m+'月'+c.d+'日'+(st==='rest'?'（予定なし）':'')+'">'+CHECK+'</button></td>';
+        const btn=(!c.off||on)?'<button class="chk" data-item="'+it.id+'" data-day="'+c.d+'" aria-pressed="'+on+'" aria-label="'+esc(it.name)+' '+m+'月'+c.d+'日'+(st==='rest'?'（予定なし）':'')+'">'+CHECK+'</button>':'';
+        html+='<td class="cell'+(c.off?' off':'')+(c.today?' today':'')+(c.w===1&&c.d>1?' w-mon':'')+(st&&!c.off?' '+st:'')+'">'+btn+'</td>';
       }
-      html+='<td class="stat" title="'+esc(pl.statTip)+'"><b>'+pl.done+'</b>/'+pl.target+'</td></tr>';
+      html+='</tr>';
       emitDrafts(it.id);
     });
     emitDrafts(null);
@@ -582,7 +599,7 @@ function render(){
   if(editing&&!catDraft&&(!cats.length||!gs.some(g=>g.id===NONE))){
     {
       html+='<tr class="addrow"><td class="addcell" colspan="2">'+(cats.length?'':'<button class="addlink" data-act="newcat">'+PLUS+'分類を追加</button>')+
-        (gs.some(g=>g.id===NONE)?'':'<button class="addlink" data-act="add" data-id="'+NONE+'">'+PLUS+'未分類で項目を追加</button>')+'</td><td colspan="'+(info.length+1)+'"></td></tr>';
+        (gs.some(g=>g.id===NONE)?'':'<button class="addlink" data-act="add" data-id="'+NONE+'">'+PLUS+'未分類で項目を追加</button>')+'</td><td colspan="'+info.length+'"></td></tr>';
     }
   }
   html+='</tbody>';
@@ -594,7 +611,7 @@ function render(){
       const cls=k===0?'':(k>=den?'full':'part');
       html+='<td class="'+(c.off?'off':'')+(c.w===1&&c.d>1?' w-mon':'')+'" title="'+k+'/'+den+'"><span class="dot '+cls+'"></span></td>';
     }
-    html+='<td class="stat"></td></tr></tfoot>';
+    html+='</tr></tfoot>';
   }
   html+='</table>';
   if(!gs.length&&!editing)html+='<div class="empty">まだ項目がありません。<button class="addlink" data-act="startedit">'+PLUS+'項目を追加する</button></div>';
@@ -655,7 +672,7 @@ $('box').addEventListener('focusin',e=>{
   const tr=e.target.closest('tbody tr');if(!tr||!editing)return;
   hover={r:tr.dataset.item?'r:'+tr.dataset.item:null,g:tr.dataset.cat&&tr.dataset.cat!==NONE?'g:'+tr.dataset.cat:null};showHover();
 });
-window.addEventListener('resize',()=>{if(editing)placeInserts();});
+window.addEventListener('resize',()=>{const tb=$('box').querySelector('table');if(tb)tb.style.cssText=colVars();if(editing)placeInserts();});
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(editing)placeInserts();});
 
 function scrollToToday(){
@@ -861,7 +878,7 @@ function ymd(dt){return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.get
 function parseYmd(s){const a=String(s||'').split('-').map(Number);return a.length===3&&a[0]?new Date(a[0],a[1]-1,a[2]):null;}
 const wdList=a=>WD_ORDER.filter(w=>(a||[]).includes(w)).map(w=>WDN[w]).join('・');
 function ruleLabel(r){
-  if(!r||r.type==='daily')return r&&r.skipOff?'平日':'';
+  if(!r||r.type==='daily')return '';
   if(r.type==='weekly')return (r.interval===2?'隔週':'毎週')+wdList(r.wds);
   if(r.type==='nth')return (r.nths||[]).map(n=>n==='L'?'最終':'第'+n).join('・')+wdList(r.wds);
   if(r.type==='date')return '毎月'+(r.dates||[]).map(v=>v==='L'?'末':v).join('・')+'日';
@@ -870,7 +887,7 @@ function ruleLabel(r){
 }
 const SHIFT_TXT={none:'',prev:'（土日祝は前の平日へ）',next:'（土日祝は次の平日へ）',skip:'（土日祝はお休み）'};
 function ruleLong(r){
-  if(!r||r.type==='daily')return r&&r.skipOff?'毎日（土日祝を除く）':'毎日';
+  if(!r||r.type==='daily')return '毎日（土日祝を除く）';
   if(r.type==='count')return (r.per==='month'?'月に':'週に')+r.n+'回（日は自由）';
   return ruleLabel(r)+(SHIFT_TXT[r.shift]||'');
 }
@@ -922,7 +939,7 @@ function planView(it,y,m,info,ck){
     for(const c of info){const key=r.per==='month'?'m':ymd(mondayOf(new Date(y,m-1,c.d)));(groups[key]=groups[key]||[]).push(c);}
     for(const key in groups){
       const g=groups[key], cnt=g.filter(c=>ck[c.d]).length, started=g.some(c=>!c.future);
-      g.forEach(c=>{sched[c.d]=!!ck[c.d];if(cnt>=n&&!ck[c.d])state[c.d]='rest';});
+      g.forEach(c=>{sched[c.d]=!!ck[c.d];if(cnt>=n&&!ck[c.d]&&!c.off)state[c.d]='rest';});
       if((started||r.per==='month')&&!(since&&g.every(c=>before(c.d)))){done+=Math.min(cnt,n);target+=n;}
     }
     tip=ruleLong(r);
@@ -930,7 +947,7 @@ function planView(it,y,m,info,ck){
     const S=schedSet(r,y,m);
     let all=0;
     for(const c of info){
-      const s=S?S.has(c.d):true;sched[c.d]=s;
+      const s=!c.off&&(S?S.has(c.d):true);sched[c.d]=s;
       if(!s){state[c.d]='rest';continue;}
       all++;
       if(!c.future&&!before(c.d)){target++;if(ck[c.d])done++;else if(!c.today)state[c.d]='miss';}
@@ -950,7 +967,7 @@ function rvs(name){return [...document.querySelectorAll('#rulePanel input[name="
 function setChecks(name,vals){document.querySelectorAll('#rulePanel input[name="'+name+'"]').forEach(e=>{e.checked=vals.map(String).includes(e.value);});}
 function readRule(){
   const t=rv('rType');
-  if(t==='daily')return {type:'daily',skipOff:$('rSkip').checked};
+  if(t==='daily')return {type:'daily'};
   if(t==='weekly')return {type:'weekly',wds:rvs('rWd').map(Number),interval:+rv('rInt'),anchor:$('rAnchor').value,shift:$('rShift').value};
   if(t==='nth')return {type:'nth',nths:rvs('rNth').map(v=>v==='L'?'L':+v),wds:rvs('rWd2').map(Number),shift:$('rShift').value};
   if(t==='date')return {type:'date',dates:rvs('rDate').map(v=>v==='L'?'L':+v),shift:$('rShift').value};
@@ -965,7 +982,7 @@ function syncRuleUI(){
   if(r.type==='count')txt=ruleLong(r)+'。回数に届いたら、その'+(r.per==='month'?'月':'週')+'の残りの日は空欄になります。';
   else{
     const S=schedSet(r,y,m);
-    if(!S)txt=m+'月：毎日';
+    if(!S)txt=m+'月：土日祝以外の毎日';
     else{const a=[...S].sort((p,q)=>p-q);txt=a.length?m+'月の予定：'+a.map(d=>d+'日('+WDN[new Date(y,m-1,d).getDay()]+')').join('、'):m+'月の予定：なし';}
   }
   $('rPrev').textContent=txt;
@@ -975,7 +992,6 @@ function syncRuleUI(){
 function openRule(it){
   ruleItem=it;const r=it.rule||{type:'daily'};
   document.querySelectorAll('#rulePanel input[name="rType"]').forEach(e=>{e.checked=e.value===r.type;});
-  $('rSkip').checked=!!(r.type==='daily'&&r.skipOff);
   setChecks('rWd',r.type==='weekly'?r.wds:[1]);
   setChecks('rInt',[r.type==='weekly'&&r.interval===2?2:1]);
   $('rAnchor').value=r.type==='weekly'&&r.anchor?r.anchor:ymd(mondayOf(new Date()));
@@ -1017,7 +1033,7 @@ function eventRows(y,m,days,info){
       d=x.ed+1;
     }
     for(;d<=days;d++)h+='<th></th>';
-    h+='<th class="stat"></th></tr>';
+    h+='</tr>';
   });
   return h;
 }
@@ -1057,7 +1073,7 @@ $('rulePanel').addEventListener('input',syncRuleUI);
 $('rulePanel').addEventListener('change',syncRuleUI);
 $('rulePanel').addEventListener('submit',e=>{
   e.preventDefault();if(!ruleItem)return;
-  const r=readRule();ruleItem.rule=r.type==='daily'&&!r.skipOff?null:r;
+  const r=readRule();ruleItem.rule=r.type==='daily'?null:r;
   saveDoc('items',ruleItem);closeRule();
 });
 $('rCancel').addEventListener('click',closeRule);
@@ -1075,6 +1091,38 @@ $('box').addEventListener('click',e=>{
   const b=e.target.closest('.evbar');if(!b||!editing)return;
   const ev=events.find(x=>x.id===b.dataset.evid);if(ev)openEvent(ev);
 });
+
+
+/* ---------- 列幅（分類・項目） ---------- */
+const COLW_KEY='routinecheck-colw';
+let colW=(()=>{try{return JSON.parse(localStorage.getItem(COLW_KEY))||{};}catch(e){return {};}})();
+function colVars(){
+  const narrow=window.matchMedia('(max-width:600px)').matches;
+  let c=colW.cat||(narrow?78:112), n=colW.name||(narrow?130:200);
+  if(editing){c=Math.max(c,170);n=Math.max(n,340);}
+  return '--catw:'+c+'px;--namew:'+n+'px';
+}
+let rz=null;
+$('box').addEventListener('pointerdown',e=>{
+  const h=e.target.closest('.colrz');if(!h)return;
+  e.preventDefault();e.stopPropagation();
+  const col=h.dataset.col, th=h.parentElement;
+  rz={col,x:e.clientX,w:th.offsetWidth};
+  document.body.classList.add('resizing');h.classList.add('on');
+});
+window.addEventListener('pointermove',e=>{
+  if(!rz)return;
+  const w=Math.round(Math.max(rz.col==='cat'?56:90,Math.min(480,rz.w+e.clientX-rz.x)));
+  colW[rz.col]=w;
+  const tb=$('box').querySelector('table');if(tb)tb.style.cssText=colVars();
+  placeInserts();
+});
+window.addEventListener('pointerup',()=>{
+  if(!rz)return;rz=null;document.body.classList.remove('resizing');
+  try{localStorage.setItem(COLW_KEY,JSON.stringify(colW));}catch(e){}
+  render();
+});
+$('box').addEventListener('dblclick',e=>{const h=e.target.closest('.colrz');if(!h)return;delete colW[h.dataset.col];try{localStorage.setItem(COLW_KEY,JSON.stringify(colW));}catch(_){}render();});
 
 /* ---------- 起動 ---------- */
 render();scrollToToday();
