@@ -295,6 +295,18 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none!impor
 .cell.miss .chk{border-color:color-mix(in srgb,var(--danger) 75%,var(--surface));background:color-mix(in srgb,var(--danger) 9%,transparent)}
 .rnote{margin:0;font-size:13px;color:var(--muted)}
 tbody tr[data-item]:hover>td.cell,tbody tr[data-item]:hover>.namecol{background-image:linear-gradient(var(--hl),var(--hl))}
+/* 線を濃く */
+:root{--line:#C3CCD7;--grid:#C9D1DB;--line2:#4F5B70}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--line:#3C4552;--grid:#39414D;--line2:#98A3B5}}
+:root[data-theme="dark"]{--line:#3C4552;--grid:#39414D;--line2:#98A3B5}
+tr.gend>*{border-bottom:2px solid var(--line2)!important}
+tbody tr:last-child>*{border-bottom:none!important}
+th.dayh.w-mon,td.cell.w-mon,tfoot td.w-mon{border-left:2px solid var(--line2)}
+tbody .catcol,thead tr:not(.evrow) .catcol{border-right:1px solid var(--line2)}
+tbody .namecol,thead tr:not(.evrow) .namecol,tfoot .namecol{border-right:2px solid var(--line2)}
+thead tr:not(.evrow) th{border-bottom:2px solid var(--line2)}
+tfoot td{border-top:1.5px solid var(--line2)}
+.tablebox{border-color:var(--line2)}
 </style>
 
 </head>
