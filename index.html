@@ -309,6 +309,15 @@ tfoot td{border-top:1.5px solid var(--line2)}
 .tablebox{border-color:var(--line2)}
 tbody td.catcol{border-bottom:2px solid var(--line2)!important}
 tbody td.catcol.glast{border-bottom:none!important}
+/* 今日を強調 */
+th.dayh.today{background:var(--today)!important;color:var(--today-ink);box-shadow:inset 2px 0 0 var(--today),inset -2px 0 0 var(--today);position:sticky}
+th.dayh.today .n{background:none!important;color:var(--today-ink)!important;padding:0!important;font-weight:700;font-size:14px}
+th.dayh.today .w{color:var(--today-ink)!important;font-weight:700}
+td.cell.today,tfoot td.today{background-image:linear-gradient(color-mix(in srgb,var(--today) 14%,transparent),color-mix(in srgb,var(--today) 14%,transparent))!important;box-shadow:inset 2px 0 0 var(--today),inset -2px 0 0 var(--today)}
+tbody tr:hover>td.cell.today{background-image:linear-gradient(color-mix(in srgb,var(--today) 22%,transparent),color-mix(in srgb,var(--today) 22%,transparent))!important}
+tfoot td.today{box-shadow:inset 2px 0 0 var(--today),inset -2px 0 0 var(--today),inset 0 -2px 0 var(--today)}
+td.cell.today .chk:not([aria-pressed="true"]){border-color:var(--today);border-width:2px}
+.legend i[style*="--today"]{background:var(--today)!important}
 </style>
 
 </head>
@@ -624,7 +633,7 @@ function render(){
       let k=0,den=0;
       for(const it of items){const on=!!(checks[it.id]||{})[c.d];const pv=planCache[it.id];const sch=pv?pv.sched[c.d]:true;if(sch||on)den++;if(on)k++;}
       const cls=k===0?'':(k>=den?'full':'part');
-      html+='<td class="'+(c.off?'off':'')+(c.w===1&&c.d>1?' w-mon':'')+'" title="'+k+'/'+den+'"><span class="dot '+cls+'"></span></td>';
+      html+='<td class="'+(c.off?'off':'')+(c.w===1&&c.d>1?' w-mon':'')+(c.today?' today':'')+'" title="'+k+'/'+den+'"><span class="dot '+cls+'"></span></td>';
     }
     html+='</tr></tfoot>';
   }
