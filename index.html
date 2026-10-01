@@ -307,6 +307,8 @@ tbody .namecol,thead tr:not(.evrow) .namecol,tfoot .namecol{border-right:2px sol
 thead tr:not(.evrow) th{border-bottom:2px solid var(--line2)}
 tfoot td{border-top:1.5px solid var(--line2)}
 .tablebox{border-color:var(--line2)}
+tbody td.catcol{border-bottom:2px solid var(--line2)!important}
+tbody td.catcol.glast{border-bottom:none!important}
 </style>
 
 </head>
@@ -516,7 +518,7 @@ const iconBtn=(act,id,label,svg,cls,attrs)=>'<button class="ib'+(cls?' '+cls:'')
 
 function catCell(g,rows){
   const hue=g.cat?hueOf(g.cat):'var(--muted)';
-  let h='<td class="catcol" rowspan="'+rows+'" data-catcell="'+g.id+'" style="--hue:'+hue+'"><div class="cathead">';
+  let h='<td class="catcol'+(g.last?' glast':'')+'" rowspan="'+rows+'" data-catcell="'+g.id+'" style="--hue:'+hue+'"><div class="cathead">';
   if(!g.cat){
     h+='<span class="cn none">未分類</span>';
   }else if(editing){
@@ -566,6 +568,7 @@ function render(){
   const catDraftHtml=d=>'<tr class="draft catdraft gend'+(d.err?' err':'')+'" data-cat="_new" data-dkey="'+d.k+'"><td class="catcol" style="--hue:'+HUES[nextHue()]+'"><div class="cathead"><span class="cdot"></span><input type="text" id="dc-'+d.k+'" data-key="'+d.k+'" class="din dname cin" value="'+esc(d.name)+'" placeholder="新しい分類名" maxlength="20" aria-label="新しい分類名"></div></td>'+
     '<th class="namecol" scope="row"><div class="erow hint"><button class="btn mini primary" data-act="dsave" data-key="'+d.k+'">分類を作る</button><button class="btn mini" data-act="dcancel" data-key="'+d.k+'">やめる</button><span>'+(d.err?'<b class="errmsg">'+esc(d.errMsg||'分類名を入力してください')+'</b>':'Enterで作成 / Escでやめる')+'</span></div></th>'+blankCells(info)+'</tr>';
   let endCatDone=false;
+  gs.forEach((g,i)=>{g.last=i===gs.length-1&&!(editing&&(cds.some(d=>cAnchor(d)===null)||!cats.length||!gs.some(x=>x.id===NONE)));});
   for(const g of gs){
     if(g.cat)cds.filter(d=>cAnchor(d)===g.id).forEach(d=>{html+=catDraftHtml(d);});
     if(g.id===NONE&&!endCatDone){cds.filter(d=>cAnchor(d)===null).forEach(d=>{html+=catDraftHtml(d);});endCatDone=true;}
